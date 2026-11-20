@@ -114,6 +114,10 @@ function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return
 function maps(e){return 'https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(e);}
 function wa(t){var d=String(t||'').replace(/\D/g,'');return 'https://wa.me/'+(d?'55'+d:'');}
 function ini(n){var p=n.trim().split(/\s+/);return (p[0][0]+(p.length>1?p[p.length-1][0]:'')).toUpperCase();}
+function prI(x){return x.preco!=null?x.preco:(S.prod[x.ref]?S.prod[x.ref].preco:0);}
+function nomeP(r){return S.prod[r]?S.prod[r].nome:'Peça REF '+r;}
+function usoProd(r){var l=[];S.cons.forEach(function(c){var n=0;(c.entrega?c.entrega.itens:[]).forEach(function(x){if(x.ref===r)n+=x.entregue;});c.emMaos.forEach(function(x){if(x.ref===r)n+=x.qtd;});if(n)l.push(c.nome+' ('+n+')');});return l;}
+function pfVazio(){return {ref:'',nome:'',custo:'',valor:'',msg:'',erro:false,mar:'50',com:'30',edit:null,delOk:false};}
 function mk(a){return a.map(function(x){return {ref:x[0],entregue:x[1],vendida:0,devolvida:0};});}
 function ent(data,itens,prev){return {data:data,prevista:prev||addD(data,60),itens:mk(itens)};}
 function seg(s){return D(s).getUTCDay()===1;}
@@ -131,7 +135,7 @@ var S={
  vendedores:[],setup:{nome:'',login:'',senha:'',senha2:'',praca:'',erro:''},
  vf:null,
  prod:{},
- pf:{ref:'',nome:'',custo:'',valor:'',msg:'',erro:false,mar:'50',com:'30'},
+ pf:{ref:'',nome:'',custo:'',valor:'',msg:'',erro:false,mar:'50',com:'30',edit:null,delOk:false},
  cons:[
  ],
  pag:{aberto:false,forma:'Pix'},
@@ -286,7 +290,7 @@ V.ficha=function(){
  '</main>'+nav('consultoras');
 };
 function calc(){
- var a=S.ac,t=0,qv=0,qf=0;a.itens.forEach(function(x){t+=x.vendida*S.prod[x.ref].preco;qv+=x.vendida;qf+=x.entregue-x.vendida-x.devolvida;});
+ var a=S.ac,t=0,qv=0,qf=0;a.itens.forEach(function(x){t+=x.vendida*prI(x);qv+=x.vendida;qf+=x.entregue-x.vendida-x.devolvida;});
  t=r2(t);var p=faixa(t),com=r2(t*p/100),dev=r2(t-com);
  var pt=a.pagoTexto===null?dev.toFixed(2).replace('.',','):a.pagoTexto,pg=Math.min(Math.max(num(pt),0),dev);
  return {t:t,qv:qv,qf:qf,p:p,com:com,dev:dev,pt:pt,pg:r2(pg),saldo:r2(dev-pg),cv:r2(pg*0.2),
@@ -305,7 +309,7 @@ V.acerto=function(){
  }
  var k=calc(),tot=0;a.itens.forEach(function(x){tot+=x.entregue;});
  return hdrW('Acerto · '+esc(c.nome),'Entrega de '+brY(c.entrega.data)+' · '+tot+' peças')+'<main><p class="mu" style="margin:0">Marque o que ela vendeu e o que devolveu. O restante continua com ela.</p>'+
- a.itens.map(function(x,i){var p=S.prod[x.ref];return '<article class="card" style="gap:10px;padding:12px 14px"><div class="row" style="align-items:flex-start"><span style="display:flex;flex-direction:column;gap:2px"><strong style="font-size:15px">'+esc(p.nome)+'</strong><span class="mu" style="font-size:12px">REF '+x.ref+' · etiqueta '+fmt(p.preco)+' · levou '+x.entregue+'</span></span><span class="mu" style="font-size:12px;text-align:right">fica<br><strong style="font-size:16px;color:var(--tx)">'+(x.entregue-x.vendida-x.devolvida)+'</strong></span></div>'+
+ a.itens.map(function(x,i){var p={nome:nomeP(x.ref),preco:prI(x)};return '<article class="card" style="gap:10px;padding:12px 14px"><div class="row" style="align-items:flex-start"><span style="display:flex;flex-direction:column;gap:2px"><strong style="font-size:15px">'+esc(p.nome)+'</strong><span class="mu" style="font-size:12px">REF '+x.ref+' · etiqueta '+fmt(p.preco)+' · levou '+x.entregue+'</span></span><span class="mu" style="font-size:12px;text-align:right">fica<br><strong style="font-size:16px;color:var(--tx)">'+(x.entregue-x.vendida-x.devolvida)+'</strong></span></div>'+
   '<div class="g2"><div class="step" style="background:var(--acl)"><button class="sb" style="background:#fff;color:var(--ac)" data-act="acQ" data-i="'+i+'" data-c="vendida" data-d="-1" aria-label="Menos uma vendida">−</button><span style="display:flex;flex-direction:column;align-items:center;color:var(--ac2)"><strong style="font-size:16px">'+x.vendida+'</strong><span style="font-size:11px">vendidas</span></span><button class="sb" style="background:var(--ac);color:#fff" data-act="acQ" data-i="'+i+'" data-c="vendida" data-d="1" aria-label="Mais uma vendida">+</button></div>'+
   '<div class="step" style="background:#EEF1EF"><button class="sb" style="background:#fff;color:var(--tx)" data-act="acQ" data-i="'+i+'" data-c="devolvida" data-d="-1" aria-label="Menos uma devolvida">−</button><span style="display:flex;flex-direction:column;align-items:center"><strong style="font-size:16px">'+x.devolvida+'</strong><span style="font-size:11px;color:var(--mu)">devolvidas</span></span><button class="sb" style="background:var(--mu);color:#fff" data-act="acQ" data-i="'+i+'" data-c="devolvida" data-d="1" aria-label="Mais uma devolvida">+</button></div></div></article>';}).join('')+
  '<section class="card" style="padding:16px;gap:10px"><h2>Resumo</h2><div class="row"><span>Peças vendidas</span><strong>'+k.qv+'</strong></div><div class="row"><span>Total vendido</span><strong>'+fmt(k.t)+'</strong></div><div class="row"><span>Comissão da consultora ('+k.p+'%)</span><strong>− '+fmt(k.com)+'</strong></div>'+
@@ -352,10 +356,10 @@ V.novaentrega=function(){
  } else if(c.entrega){
   body='<section class="warn"><div style="display:flex;align-items:center;gap:8px;color:var(--wa);font-weight:600">'+IC.lock+'Acerto pendente</div><span>'+esc(c.nome)+' ainda tem o acerto de '+brY(c.entrega.prevista)+' em aberto. Faça o acerto antes de uma nova entrega.</span><button class="btn bp" data-act="acerto" data-id="'+c.id+'">Fazer acerto agora</button></section>';
  } else {
-  var q=0,v=0,prev=0;n.itens.forEach(function(x){q+=x.qtd;v+=x.qtd*S.prod[x.ref].preco;if(x.prev)prev+=x.qtd;});
+  var q=0,v=0,prev=0;n.itens.forEach(function(x){q+=x.qtd;v+=x.qtd*prI(x);if(x.prev)prev+=x.qtd;});
   body='<div class="ok" style="padding:10px 14px;font-size:13px;border-radius:12px">'+esc(c.nome)+' está liberada.'+(prev?' '+prev+' peça(s) do ciclo anterior já foram incluídas.':'')+'</div>'+
   '<div class="fld"><label for="ref">Referência da peça</label><div style="display:flex;gap:8px"><input id="ref" inputmode="numeric" placeholder="Ex.: 1023" value="'+esc(n.ref)+'" data-in="neRef" style="flex:1;min-width:0"><button class="btn bp" data-act="neAdd">Adicionar</button></div><span class="mu" style="font-size:12px">'+esc(n.msg||'Digite o código da etiqueta. O preço vem do cadastro do produto.')+'</span></div>'+
-  n.itens.map(function(x,i){var p=S.prod[x.ref];return '<article class="card" style="flex-direction:row;align-items:center;gap:10px;padding:12px 14px"><span style="flex:1;display:flex;flex-direction:column;gap:2px;min-width:0"><strong style="font-size:15px">'+esc(p.nome)+'</strong><span class="mu" style="font-size:12px">REF '+x.ref+' · '+fmt(p.preco)+(x.prev?' · ciclo anterior':'')+'</span></span><button class="sb" style="border:1px solid var(--bd2);background:#fff" data-act="neQ" data-i="'+i+'" data-d="-1" aria-label="Diminuir">−</button><strong style="min-width:22px;text-align:center">'+x.qtd+'</strong><button class="sb" style="background:var(--ac);color:#fff" data-act="neQ" data-i="'+i+'" data-d="1" aria-label="Aumentar">+</button></article>';}).join('')+
+  n.itens.map(function(x,i){var p={nome:nomeP(x.ref),preco:prI(x)};return '<article class="card" style="flex-direction:row;align-items:center;gap:10px;padding:12px 14px"><span style="flex:1;display:flex;flex-direction:column;gap:2px;min-width:0"><strong style="font-size:15px">'+esc(p.nome)+'</strong><span class="mu" style="font-size:12px">REF '+x.ref+' · '+fmt(p.preco)+(x.prev?' · ciclo anterior':'')+'</span></span><button class="sb" style="border:1px solid var(--bd2);background:#fff" data-act="neQ" data-i="'+i+'" data-d="-1" aria-label="Diminuir">−</button><strong style="min-width:22px;text-align:center">'+x.qtd+'</strong><button class="sb" style="background:var(--ac);color:#fff" data-act="neQ" data-i="'+i+'" data-d="1" aria-label="Aumentar">+</button></article>';}).join('')+
   '<section class="card" style="padding:16px"><div class="row"><span>Total de peças</span><strong>'+q+'</strong></div><div class="row"><span>Valor em etiqueta</span><strong>'+fmt(v)+'</strong></div>'+
   '<div class="fld"><label for="ne-dt">Data da entrega</label><input id="ne-dt" type="date" max="'+HOJE+'" value="'+n.dataEnt+'" data-in="neDt"><span class="mu" style="font-size:12px">Para consultoras que já estão com mercadoria, coloque a data em que você entregou.</span></div>'+escolhaData(addD(n.dataEnt,60),n.data,'neData')+''+
   '<button class="btn bp" style="min-height:52px;margin-top:4px'+(q?'':';opacity:.5')+'" data-act="neGerar"'+(q?'':' disabled')+'>Gerar romaneio</button></section>';
@@ -385,17 +389,18 @@ V.produtos=function(){
    '<p class="mu" style="margin:0;font-size:12px;line-height:1.5">Conta usada: (custo + lucro desejado) ÷ (1 − comissão). A comissão sai do preço de venda, por isso não basta somar as porcentagens ao custo.</p>'+
    '<button class="btn bp" data-act="pfUsar" data-v="'+pc.sug+'">Usar '+fmt(pc.sug)+' como valor da etiqueta</button>';}
   calc+='</section>';}
- return hdrW('Produtos',ks.length+' peças cadastradas')+'<main><section class="card" style="padding:16px;gap:12px"><h2>Cadastrar produto</h2>'+
- '<div class="fld"><label for="pf-ref">Referência</label><input id="pf-ref" inputmode="numeric" placeholder="Ex.: 6010" value="'+esc(f.ref)+'" data-in="pfF" data-f="ref"></div>'+
+ var ed=f.edit,uso=ed?usoProd(ed):[];
+ return hdrW('Produtos',ks.length+' peças cadastradas')+'<main><section class="card" style="padding:16px;gap:12px;'+(ed?'border:2px solid var(--ac)':'')+'"><h2>'+(ed?'Editar produto':'Cadastrar produto')+'</h2>'+
+ (ed?'<div class="fld"><span style="font-size:13px;font-weight:600">Referência</span><span class="badge bok" style="align-self:flex-start;font-size:14px">REF '+esc(ed)+'</span><span class="mu" style="font-size:12px">A referência não pode ser alterada.'+(uso.length?' Peças com consultoras agora: '+esc(uso.join(', '))+'.':'')+'</span></div>':'<div class="fld"><label for="pf-ref">Referência</label><input id="pf-ref" inputmode="numeric" placeholder="Ex.: 6010" value="'+esc(f.ref)+'" data-in="pfF" data-f="ref"></div>')+
  '<div class="fld"><label for="pf-nome">Nome da peça</label><input id="pf-nome" placeholder="Ex.: Saia plissada" value="'+esc(f.nome)+'" data-in="pfF" data-f="nome"></div>'+
  '<div class="fld"><label for="pf-custo">Quanto você pagou na peça (R$)</label><div style="display:flex;gap:8px"><input id="pf-custo" inputmode="decimal" placeholder="Ex.: 29,90" value="'+esc(f.custo)+'" data-in="pfF" data-f="custo" style="flex:1;min-width:0"><button class="btn bl" data-act="pfCalc">Calcular preço</button></div></div>'+
  calc+
  '<div class="fld"><label for="pf-valor">Valor da etiqueta (R$)</label><input id="pf-valor" inputmode="decimal" placeholder="0,00" value="'+esc(f.valor)+'" data-in="pfF" data-f="valor"></div>'+
  (f.msg?'<div class="'+(f.erro?'warn':'ok')+'" style="padding:12px;border-radius:12px">'+esc(f.msg)+'</div>':'')+
- '<button class="btn bp" data-act="pfSave">Salvar produto</button></section>'+
- '<h2>Peças cadastradas</h2>'+(ks.length?'':'<p class="mu">Nenhuma peça cadastrada ainda.</p>')+ks.map(function(k){var p=S.prod[k],ex='';
+ (ed?'<div class="g2"><button class="btn bs" data-act="pfCancel">Cancelar</button><button class="btn bp" data-act="pfSave">Salvar alterações</button></div><button class="btn bw" data-act="pfDel">'+(f.delOk?'Toque de novo para excluir':'Excluir produto')+'</button>':'<button class="btn bp" data-act="pfSave">Salvar produto</button>')+'</section>'+
+ '<h2>Peças cadastradas</h2>'+(ks.length?'<p class="mu" style="margin:0;font-size:12px">Toque numa peça para editar ou excluir.</p>':'<p class="mu">Nenhuma peça cadastrada ainda.</p>')+ks.map(function(k){var p=S.prod[k],ex='';
   if(p.custo){var l=r2(p.preco*(1-(p.com!=null?p.com:30)/100)-p.custo);ex='<span class="mu" style="font-size:12px">custo '+fmt(p.custo)+' · seu lucro com comissão de '+(p.com!=null?p.com:30)+'%: '+fmt(l)+' ('+pctT(l/p.custo*100)+' sobre o custo)</span>';}
-  return '<div class="card" style="flex-direction:row;align-items:center;gap:12px;padding:12px 14px"><span class="badge bok">REF '+k+'</span><span style="flex:1;display:flex;flex-direction:column;gap:2px;min-width:0"><strong style="font-size:14px">'+esc(p.nome)+'</strong>'+ex+'</span><strong style="font-size:14px">'+fmt(p.preco)+'</strong></div>';}).join('')+
+  return '<button class="card" data-act="pfEdit" data-v="'+esc(k)+'" style="flex-direction:row;align-items:center;gap:12px;padding:12px 14px;'+(ed===k?'border:2px solid var(--ac)':'')+'"><span class="badge bok">REF '+esc(k)+'</span><span style="flex:1;display:flex;flex-direction:column;gap:2px;min-width:0"><strong style="font-size:14px">'+esc(p.nome)+'</strong>'+ex+'</span><strong style="font-size:14px">'+fmt(p.preco)+'</strong>'+IC.edit+'</button>';}).join('')+
  '</main>';
 };
 V.login=function(){var l=S.lg,b=S.bk||{};
@@ -524,7 +529,7 @@ var app=document.getElementById('app');
 function render(){HOJE=hojeISO();if(S.user)salvarLocal();app.innerHTML=V[S.tela]();var m=app.querySelector('main');if(m)m.scrollTop=S._scroll||0;S._scroll=0;}
 function keep(){var m=app.querySelector('main');S._scroll=m?m.scrollTop:0;}
 function go(t){if(t!==S.tela)S.hist.push(S.tela);S.tela=t;S._scroll=0;render();}
-function startNE(id){var c=getC(id);if(!c||!inP(c)){c=consV()[0];id=c?c.id:null;}S.ne={cons:id,dataEnt:HOJE,data:sugere(addD(HOJE,60)),ref:'',msg:'',ok:null,itens:c&&!c.entrega&&!c.saldo?c.emMaos.map(function(x){return {ref:x.ref,qtd:x.qtd,prev:true};}):[]};}
+function startNE(id){var c=getC(id);if(!c||!inP(c)){c=consV()[0];id=c?c.id:null;}S.ne={cons:id,dataEnt:HOJE,data:sugere(addD(HOJE,60)),ref:'',msg:'',ok:null,itens:c&&!c.entrega&&!c.saldo?c.emMaos.map(function(x){return {ref:x.ref,qtd:x.qtd,prev:true,preco:prI(x)};}):[]};}
 
 var A={
  go:function(d){if(d.to==='novaentrega')startNE(S.ne.cons);if(d.to==='rota')S.rs.ver=selIds().length>0;go(d.to);},
@@ -539,15 +544,15 @@ var A={
   S.cx.lista.unshift({praca:c.praca,dt:HOJE,ent:true,d:'Quitação de saldo · '+c.nome,cat:'Quitação de saldo',f:S.pag.forma,v:v});
   S.cm.vend.unshift({praca:c.praca,c:c.nome+' (quitação)',dt:HOJE,base:v,pago:false});
   c.hist.unshift(['Pagamento de saldo · '+S.pag.forma,brY(HOJE),fmt(v)]);c.saldo=0;S.pag.aberto=false;render();},
- acerto:function(d){var c=getC(d.id);S.ac={id:d.id,forma:'Pix',pagoTexto:null,res:null,pend:false,motivo:'',novaData:null,erro:'',itens:c.entrega.itens.map(function(x){return {ref:x.ref,entregue:x.entregue,vendida:0,devolvida:0};})};go('acerto');},
+ acerto:function(d){var c=getC(d.id);S.ac={id:d.id,forma:'Pix',pagoTexto:null,res:null,pend:false,motivo:'',novaData:null,erro:'',itens:c.entrega.itens.map(function(x){return {ref:x.ref,entregue:x.entregue,vendida:0,devolvida:0,preco:prI(x)};})};go('acerto');},
  acQ:function(d){keep();var x=S.ac.itens[+d.i],c=d.c,n=x[c]+(+d.d),o=c==='vendida'?x.devolvida:x.vendida;if(n<0||n+o>x.entregue)return;x[c]=n;S.ac.pagoTexto=null;render();},
  acForma:function(d){keep();S.ac.forma=d.v;render();},
  acOk:function(){var a=S.ac,c=getC(a.id),k=calc();
   if(k.pg>0)S.cx.lista.unshift({praca:c.praca,dt:HOJE,ent:true,d:'Acerto · '+c.nome,cat:'Acerto',f:a.forma,v:k.pg});
   if(k.pg>0)S.cm.vend.unshift({praca:c.praca,c:c.nome,dt:HOJE,base:k.pg,pago:false});
   S.cm.vendas.unshift({praca:c.praca,c:c.nome,dt:HOJE,t:k.t});
-  var fica={};a.itens.forEach(function(x){var f=x.entregue-x.vendida-x.devolvida;if(f>0)fica[x.ref]=(fica[x.ref]||0)+f;});
-  c.emMaos=Object.keys(fica).map(function(r){return {ref:r,qtd:fica[r]};});
+  var fica={};a.itens.forEach(function(x){var f=x.entregue-x.vendida-x.devolvida,k=x.ref+'|'+prI(x);if(f>0)fica[k]=(fica[k]||0)+f;});
+  c.emMaos=Object.keys(fica).map(function(k){var p=k.split('|');return {ref:p[0],preco:+p[1],qtd:fica[k]};});
   c.saldo=r2(c.saldo+k.saldo);c.ultFaixa=k.p;c.entrega=null;c.pendente=null;
   c.hist.unshift(['Acerto · vendeu '+fmt(k.t)+' ('+k.p+'%)',brY(HOJE),'Pagou '+fmt(k.pg)+(k.saldo>0?' · deve '+fmt(k.saldo):'')]);
   a.res=k;S.hist=['inicio'];render();},
@@ -623,12 +628,12 @@ var A={
  neNova:function(){startNE(S.ne.cons);render();},
  neAdd:function(){keep();var n=S.ne,cod=String(n.ref).replace(/\D/g,''),p=S.prod[cod];
   if(!p){n.msg='Referência não encontrada. Cadastre a peça em Produtos.';render();return;}
-  var f=n.itens.filter(function(x){return x.ref===cod&&!x.prev;})[0];if(f)f.qtd++;else n.itens.push({ref:cod,qtd:1});
+  var f=n.itens.filter(function(x){return x.ref===cod&&!x.prev;})[0];if(f)f.qtd++;else n.itens.push({ref:cod,qtd:1,preco:p.preco});
   n.ref='';n.msg=p.nome+' adicionada.';render();},
  neQ:function(d){keep();var x=S.ne.itens[+d.i];x.qtd+=(+d.d);if(x.qtd<=0)S.ne.itens.splice(+d.i,1);render();},
  neGerar:function(){var n=S.ne,c=getC(n.cons),q=0,v=0,agg={};
-  n.itens.forEach(function(x){q+=x.qtd;v+=x.qtd*S.prod[x.ref].preco;agg[x.ref]=(agg[x.ref]||0)+x.qtd;});if(!q)return;
-  c.entrega=ent(n.dataEnt,Object.keys(agg).map(function(r){return [r,agg[r]];}),n.data);c.emMaos=[];c.pendente=null;
+  n.itens.forEach(function(x){var pr=prI(x),k=x.ref+'|'+pr;q+=x.qtd;v+=x.qtd*pr;agg[k]=(agg[k]||0)+x.qtd;});if(!q)return;
+  c.entrega={data:n.dataEnt,prevista:n.data,itens:Object.keys(agg).map(function(k){var p=k.split('|');return {ref:p[0],preco:+p[1],entregue:agg[k],vendida:0,devolvida:0};})};c.emMaos=[];c.pendente=null;
   c.hist.unshift(['Entrega · '+q+' peças',brY(n.dataEnt),fmt(v)+' em etiqueta']);
   n.ok={nome:c.nome,q:q,v:v,prev:c.entrega.prevista};render();},
  nvOpen:function(){var pr=pracaAtual();S.novo={cep:'',lat:null,lng:null,gps:false,geo:null,nome:'',nasc:'',cpf:'',tel:'',rua:'',bairro:'',ref:'',erro:'',praca:pr,cidade:PR(pr).cidades[0].nome};go('novacons');},
@@ -689,7 +694,22 @@ var A={
  pfCalc:function(){keep();if(!(numP(S.pf.custo)>0)){S.pf.erro=true;S.pf.msg='Informe o custo da peça para calcular.';}else{S.pf.msg='';}render();},
  pfCom:function(d){keep();S.pf.com=String(d.v);render();},
  pfUsar:function(d){keep();S.pf.valor=(+d.v).toFixed(2).replace('.',',');S.pf.erro=false;S.pf.msg='Preço aplicado. Confira e toque em Salvar produto.';render();},
+ pfEdit:function(d){var p=S.prod[d.v];if(!p)return;var c2=function(n){return n!=null?(+n).toFixed(2).replace('.',','):'';};
+  S.pf={ref:d.v,nome:p.nome,custo:c2(p.custo),valor:c2(p.preco),msg:'',erro:false,mar:'50',com:String(p.com!=null?p.com:30),edit:d.v,delOk:false};S._scroll=0;render();},
+ pfCancel:function(){S.pf=pfVazio();render();},
+ pfDel:function(){var f=S.pf,k=f.edit,uso=usoProd(k);
+  if(uso.length){keep();f.erro=true;f.msg='Não dá para excluir: essa peça está com '+uso.join(', ')+'. Faça o acerto antes.';f.delOk=false;render();return;}
+  if(!f.delOk){keep();f.delOk=true;f.erro=true;f.msg='Tem certeza? Toque de novo em "Toque de novo para excluir" para apagar a REF '+k+'.';render();return;}
+  var nome=S.prod[k].nome;delete S.prod[k];if(S.ne&&S.ne.itens)S.ne.itens=S.ne.itens.filter(function(x){return x.ref!==k;});
+  S.pf=pfVazio();S.pf.msg='REF '+k+' – '+nome+' excluída.';render();},
  pfSave:function(){var f=S.pf,r=f.ref.replace(/\D/g,''),v=num(f.valor);
+  if(f.edit){var k=f.edit,old=S.prod[k];
+   if(!f.nome.trim()){f.erro=true;f.msg='Informe o nome da peça.';render();return;}
+   if(v<=0){f.erro=true;f.msg='Informe o valor da etiqueta.';render();return;}
+   var mudouPreco=old&&r2(old.preco)!==r2(v),uso=usoProd(k);
+   if(mudouPreco)S.cons.forEach(function(c){(c.entrega?c.entrega.itens:[]).concat(c.emMaos).forEach(function(x){if(x.ref===k&&x.preco==null)x.preco=old.preco;});});
+   S.prod[k]={nome:f.nome.trim(),preco:v,custo:numP(f.custo)||null,com:numP(f.com)};
+   S.pf=pfVazio();S.pf.msg='REF '+k+' atualizada'+(mudouPreco?': novo preço '+fmt(v)+'.'+(uso.length?' As peças que já estão com as consultoras continuam com o preço antigo ('+fmt(old.preco)+').':''):'.');render();return;}
   if(!r){f.erro=true;f.msg='Informe a referência.';}
   else if(S.prod[r]){f.erro=true;f.msg='A referência '+r+' já está cadastrada ('+S.prod[r].nome+').';}
   else if(!f.nome.trim()){f.erro=true;f.msg='Informe o nome da peça.';}
