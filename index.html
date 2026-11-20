@@ -131,7 +131,7 @@ var S={
  vendedores:[],setup:{nome:'',login:'',senha:'',senha2:'',praca:'',erro:''},
  vf:null,
  prod:{},
- pf:{ref:'',nome:'',custo:'',valor:'',msg:'',erro:false,margem:35,com:40},
+ pf:{ref:'',nome:'',custo:'',valor:'',msg:'',erro:false,mar:'50',com:'30'},
  cons:[
  ],
  pag:{aberto:false,forma:'Pix'},
@@ -363,30 +363,38 @@ V.novaentrega=function(){
  return hdrW('Nova entrega')+'<main>'+(n.ok?'':'<div class="fld"><label for="cons">Consultora</label><select id="cons" data-in="neCons">'+consV().slice().sort(function(a,b){return a.nome.localeCompare(b.nome);}).map(function(o){return '<option value="'+o.id+'"'+(o.id===n.cons?' selected':'')+'>'+esc(o.nome)+' – '+esc(o.bairro)+(S.praca==='todas'?' ('+esc(o.praca)+')':'')+'</option>';}).join('')+'</select>'+
  '<button class="btn bl" style="min-height:44px;margin-top:4px" data-act="nvOpen">+ Cadastrar nova consultora</button></div>')+body+'</main>';
 };
-function precoSug(custo,m,k){var p=custo/(1-m/100-k/100);var i=Math.floor(p),f=r2(p-i);return f<=0.90?i+0.90:i+1.90;}
+function numP(t){var x=String(t||'').trim().replace(/\s/g,'').replace('R$','');if(x.indexOf(',')>=0)x=x.replace(/\./g,'').replace(',','.');var n=parseFloat(x);return isNaN(n)?null:n;}
+function pctT(n){return (Math.round(n*10)/10).toString().replace('.',',')+'%';}
+function precoCalc(custo,mar,com){var ex=r2((custo*(1+mar/100))/(1-com/100));var sug=Math.ceil(ex)-0.10;if(sug<ex)sug=Math.ceil(ex)+0.90;return {exato:ex,sug:r2(sug)};}
 V.produtos=function(){
- var f=S.pf,ks=Object.keys(S.prod).sort(),cu=num(f.custo),calc='';
- if(cu>0){var ps=precoSug(cu,f.margem,f.com);
-  calc='<section style="background:#F4FAF8;border:1px solid var(--acb);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px">'+
-  '<strong style="font-size:15px">Calculadora de preço</strong>'+
-  '<span style="font-size:13px;font-weight:600">Sua margem de lucro</span><div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px">'+[30,35,40,45,50].map(function(m){var on=f.margem===m;return '<button class="btn '+(on?'bp':'bs')+'" style="min-height:44px;padding:0;font-size:14px" aria-pressed="'+on+'" data-act="pfMargem" data-v="'+m+'">'+m+'%</button>';}).join('')+'</div>'+
-  '<span style="font-size:13px;font-weight:600">Comissão da consultora usada no cálculo</span><div class="g3" style="gap:6px">'+[30,35,40].map(function(k){var on=f.com===k;return '<button class="btn '+(on?'bp':'bs')+'" style="min-height:44px;padding:0;font-size:14px;flex-direction:column;gap:0" aria-pressed="'+on+'" data-act="pfCom" data-v="'+k+'">'+k+'%'+(k===40?'<span style="font-size:10px;font-weight:500">recomendado</span>':'')+'</button>';}).join('')+'</div>'+
-  '<span class="mu" style="font-size:12px">Com 40% você garante a sua margem mesmo quando a consultora chega na faixa máxima.</span>'+
-  '<div class="row" style="border-top:1px solid var(--acb);padding-top:10px"><span>Preço sugerido para a etiqueta</span><span class="mid" style="color:var(--ac2)">'+fmt(ps)+'</span></div>'+
-  '<div style="display:flex;flex-direction:column;gap:6px;font-size:13px"><div style="display:grid;grid-template-columns:1.2fr 1fr 1fr 1fr;gap:4px;color:var(--mu);font-size:12px"><span>Se ela vender na faixa</span><span>Ela fica</span><span>Você recebe</span><span>Seu lucro (% da etiqueta)</span></div>'+
-  [30,35,40].map(function(k){var cons=r2(ps*k/100),rec=r2(ps-cons),l=r2(rec-cu),pc=ps>0?Math.round(l/ps*100):0;return '<div style="display:grid;grid-template-columns:1.2fr 1fr 1fr 1fr;gap:4px"><span>'+k+'%</span><span>'+fmt(cons)+'</span><span>'+fmt(rec)+'</span><strong style="color:'+(l>0?'var(--ac2)':'var(--wa)')+'">'+fmt(l)+' ('+pc+'%)</strong></div>';}).join('')+'</div>'+
-  '<span class="mu" style="font-size:12px">Margem = quanto do preço da etiqueta fica de lucro para você, depois de tirar a comissão da consultora e o custo da peça. O preço é arredondado para cima, terminando em ,90.</span>'+
-  '<button class="btn bp" data-act="pfUsar" data-v="'+ps+'">Usar '+fmt(ps)+' como valor da etiqueta</button></section>';}
+ var f=S.pf,ks=Object.keys(S.prod).sort(),calc='';
+ var cu=numP(f.custo),com=numP(f.com),mar=numP(f.mar),em='';
+ if(cu!==null&&cu>0){
+  if(com===null||com<0||com>=100)em='A comissão precisa ficar entre 0% e 99%.';
+  else if(mar===null||mar<0)em='Digite o lucro desejado em %.';
+  var inp=function(id,lbl,val,k){return '<div class="fld"><label for="'+id+'">'+lbl+'</label><input id="'+id+'" inputmode="decimal" value="'+esc(val)+'" data-in="pfF" data-f="'+k+'"></div>';};
+  calc='<section style="background:#F4FAF8;border:1px solid var(--acb);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:12px">'+
+  '<strong style="font-size:15px">Precificar peça</strong>'+
+  '<div class="g2">'+inp('pf-com','Comissão consultora (%)',f.com,'com')+inp('pf-mar','Seu lucro sobre o custo (%)',f.mar,'mar')+'</div>'+
+  '<div style="display:flex;flex-direction:column;gap:6px"><span class="mu" style="font-size:12px">Faixas de comissão</span><div class="g3" style="gap:8px">'+[30,35,40].map(function(p){var on=com===p;return '<button class="btn '+(on?'bl':'bs')+'" style="min-height:44px;padding:0;font-size:14px;'+(on?'border:1px solid var(--ac)':'')+'" aria-pressed="'+on+'" data-act="pfCom" data-v="'+p+'">'+p+'%</button>';}).join('')+'</div></div>'+
+  '<button class="btn bl" style="min-height:44px" data-act="pfCalc">Atualizar cálculo</button>';
+  if(em)calc+='<p class="warn" style="margin:0;padding:12px 14px;border-radius:14px">'+esc(em)+'</p>';
+  else{var pc=precoCalc(cu,mar,com),vCom=r2(pc.sug*com/100),luc=r2(pc.sug-vCom-cu);
+   calc+='<section style="background:var(--ac);color:#fff;border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:4px"><span style="font-size:13px;color:#CFE6DF">Preço de etiqueta sugerido</span><strong class="num" style="font-size:40px;line-height:1.1">'+fmt(pc.sug)+'</strong><span style="font-size:13px;color:#CFE6DF">Preço exato pela conta: '+fmt(pc.exato)+'</span></section>'+
+   '<section class="card" style="gap:10px"><h2 style="font-size:16px">Vendendo a '+fmt(pc.sug)+'</h2><div class="row"><span class="mu" style="font-size:14px">Consultora ('+pctT(com)+')</span><strong>'+fmt(vCom)+'</strong></div><div class="row"><span class="mu" style="font-size:14px">Custo da peça</span><strong>'+fmt(cu)+'</strong></div><div style="height:1px;background:var(--bd)"></div><div class="row" style="font-size:15px"><span style="font-weight:600">Seu lucro</span><strong style="color:var(--ac)">'+fmt(luc)+'</strong></div><span class="mu" style="font-size:12px">'+pctT(luc/cu*100)+' sobre o que você pagou</span></section>'+
+   '<p class="mu" style="margin:0;font-size:12px;line-height:1.5">Conta usada: (custo + lucro desejado) ÷ (1 − comissão). A comissão sai do preço de venda, por isso não basta somar as porcentagens ao custo.</p>'+
+   '<button class="btn bp" data-act="pfUsar" data-v="'+pc.sug+'">Usar '+fmt(pc.sug)+' como valor da etiqueta</button>';}
+  calc+='</section>';}
  return hdrW('Produtos',ks.length+' peças cadastradas')+'<main><section class="card" style="padding:16px;gap:12px"><h2>Cadastrar produto</h2>'+
  '<div class="fld"><label for="pf-ref">Referência</label><input id="pf-ref" inputmode="numeric" placeholder="Ex.: 6010" value="'+esc(f.ref)+'" data-in="pfF" data-f="ref"></div>'+
  '<div class="fld"><label for="pf-nome">Nome da peça</label><input id="pf-nome" placeholder="Ex.: Saia plissada" value="'+esc(f.nome)+'" data-in="pfF" data-f="nome"></div>'+
- '<div class="fld"><label for="pf-custo">Custo da peça (R$) · quanto você pagou</label><div style="display:flex;gap:8px"><input id="pf-custo" inputmode="decimal" placeholder="Ex.: 29,90" value="'+esc(f.custo)+'" data-in="pfF" data-f="custo" style="flex:1;min-width:0"><button class="btn bl" data-act="pfCalc">Calcular preço</button></div></div>'+
+ '<div class="fld"><label for="pf-custo">Quanto você pagou na peça (R$)</label><div style="display:flex;gap:8px"><input id="pf-custo" inputmode="decimal" placeholder="Ex.: 29,90" value="'+esc(f.custo)+'" data-in="pfF" data-f="custo" style="flex:1;min-width:0"><button class="btn bl" data-act="pfCalc">Calcular preço</button></div></div>'+
  calc+
  '<div class="fld"><label for="pf-valor">Valor da etiqueta (R$)</label><input id="pf-valor" inputmode="decimal" placeholder="0,00" value="'+esc(f.valor)+'" data-in="pfF" data-f="valor"></div>'+
  (f.msg?'<div class="'+(f.erro?'warn':'ok')+'" style="padding:12px;border-radius:12px">'+esc(f.msg)+'</div>':'')+
  '<button class="btn bp" data-act="pfSave">Salvar produto</button></section>'+
  '<h2>Peças cadastradas</h2>'+(ks.length?'':'<p class="mu">Nenhuma peça cadastrada ainda.</p>')+ks.map(function(k){var p=S.prod[k],ex='';
-  if(p.custo){var rec=p.preco*0.6,l=rec-p.custo;ex='<span class="mu" style="font-size:12px">custo '+fmt(p.custo)+' · seu lucro na faixa de 40%: '+fmt(r2(l))+' ('+(p.preco>0?Math.round(l/p.preco*100):0)+'% da etiqueta)</span>';}
+  if(p.custo){var l=r2(p.preco*(1-(p.com!=null?p.com:30)/100)-p.custo);ex='<span class="mu" style="font-size:12px">custo '+fmt(p.custo)+' · seu lucro com comissão de '+(p.com!=null?p.com:30)+'%: '+fmt(l)+' ('+pctT(l/p.custo*100)+' sobre o custo)</span>';}
   return '<div class="card" style="flex-direction:row;align-items:center;gap:12px;padding:12px 14px"><span class="badge bok">REF '+k+'</span><span style="flex:1;display:flex;flex-direction:column;gap:2px;min-width:0"><strong style="font-size:14px">'+esc(p.nome)+'</strong>'+ex+'</span><strong style="font-size:14px">'+fmt(p.preco)+'</strong></div>';}).join('')+
  '</main>';
 };
@@ -678,16 +686,15 @@ var A={
   var prev=S.hist[S.hist.length-1];S.novo=null;
   if(prev==='novaentrega'){startNE(id);}
   A.back();},
- pfCalc:function(){keep();if(num(S.pf.custo)<=0){S.pf.erro=true;S.pf.msg='Informe o custo da peça para calcular.';}else{S.pf.msg='';}render();},
- pfMargem:function(d){keep();S.pf.margem=+d.v;render();},
- pfCom:function(d){keep();S.pf.com=+d.v;render();},
+ pfCalc:function(){keep();if(!(numP(S.pf.custo)>0)){S.pf.erro=true;S.pf.msg='Informe o custo da peça para calcular.';}else{S.pf.msg='';}render();},
+ pfCom:function(d){keep();S.pf.com=String(d.v);render();},
  pfUsar:function(d){keep();S.pf.valor=(+d.v).toFixed(2).replace('.',',');S.pf.erro=false;S.pf.msg='Preço aplicado. Confira e toque em Salvar produto.';render();},
  pfSave:function(){var f=S.pf,r=f.ref.replace(/\D/g,''),v=num(f.valor);
   if(!r){f.erro=true;f.msg='Informe a referência.';}
   else if(S.prod[r]){f.erro=true;f.msg='A referência '+r+' já está cadastrada ('+S.prod[r].nome+').';}
   else if(!f.nome.trim()){f.erro=true;f.msg='Informe o nome da peça.';}
   else if(v<=0){f.erro=true;f.msg='Informe o valor da etiqueta.';}
-  else{S.prod[r]={nome:f.nome.trim(),preco:v,custo:num(f.custo)||null};f.erro=false;f.msg='REF '+r+' – '+f.nome.trim()+' cadastrada por '+fmt(v)+'.';f.ref='';f.nome='';f.valor='';f.custo='';}
+  else{S.prod[r]={nome:f.nome.trim(),preco:v,custo:numP(f.custo)||null,com:numP(f.com)};f.erro=false;f.msg='REF '+r+' – '+f.nome.trim()+' cadastrada por '+fmt(v)+'.';f.ref='';f.nome='';f.valor='';f.custo='';}
   render();},
  cxPer:function(d){S.cx.per=d.v;render();},
  cxAba:function(d){S.cx.aba=d.v;S.cx.form=false;render();},
@@ -726,7 +733,7 @@ var IN={
 };
 app.addEventListener('click',function(e){var b=e.target.closest('[data-act]');if(!b||b.disabled)return;var f=A[b.getAttribute('data-act')];if(f)f(b.dataset);});
 app.addEventListener('input',function(e){var k=e.target.getAttribute('data-in');if(k&&IN[k]&&e.target.tagName==='INPUT')IN[k](e.target);});
-app.addEventListener('change',function(e){if(e.target.id==='bk-file'&&e.target.files&&e.target.files[0]){var fr=new FileReader();fr.onload=function(){var d=null;try{d=JSON.parse(fr.result);}catch(x){}S.bk=valido(d)?{pend:d}:{msg:'Esse arquivo não é um backup válido do Rota Consultora.',erro:true};render();};fr.readAsText(e.target.files[0]);return;}var k=e.target.getAttribute('data-in');if(k&&IN[k]&&e.target.tagName==='SELECT')IN[k](e.target);});
+app.addEventListener('change',function(e){if(e.target.getAttribute('data-in')==='pfF'&&['custo','com','mar'].indexOf(e.target.getAttribute('data-f'))>=0){keep();render();return;}if(e.target.id==='bk-file'&&e.target.files&&e.target.files[0]){var fr=new FileReader();fr.onload=function(){var d=null;try{d=JSON.parse(fr.result);}catch(x){}S.bk=valido(d)?{pend:d}:{msg:'Esse arquivo não é um backup válido do Rota Consultora.',erro:true};render();};fr.readAsText(e.target.files[0]);return;}var k=e.target.getAttribute('data-in');if(k&&IN[k]&&e.target.tagName==='SELECT')IN[k](e.target);});
 app.addEventListener('keydown',function(e){if(e.key==='Enter'&&e.target.id==='ref')A.neAdd();if(e.key==='Enter'&&(e.target.id==='lg-u'||e.target.id==='lg-s'))A.entrar();if(e.key==='Enter'&&e.target.id==='np-p')A.npSug();if(e.key==='Enter'&&e.target.id==='np-o')A.npAdd();});
 render();
 })();
