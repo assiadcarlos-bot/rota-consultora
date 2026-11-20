@@ -42,6 +42,7 @@ a.card,button.card{text-decoration:none;color:var(--tx);text-align:left;font:inh
 .bok{color:var(--ac);background:var(--acl)}
 .bwa{color:var(--wa);background:var(--wal)}
 .bgr{color:var(--mu);background:#EEF1EF}
+.blj{color:#fff;background:#4338CA}
 .ctag{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;border:1px solid;border-radius:999px;padding:2px 8px;background:#fff;white-space:nowrap}
 .ctag i{width:8px;height:8px;border-radius:4px;display:inline-block}
 .warn{background:var(--wal);border:1px solid var(--wab);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:10px;color:var(--wa2);font-size:14px}
@@ -117,7 +118,12 @@ function ini(n){var p=n.trim().split(/\s+/);return (p[0][0]+(p.length>1?p[p.leng
 function prI(x){return x.preco!=null?x.preco:(S.prod[x.ref]?S.prod[x.ref].preco:0);}
 function nomeP(r){return S.prod[r]?S.prod[r].nome:'Peça REF '+r;}
 function usoProd(r){var l=[];S.cons.forEach(function(c){var n=0;(c.entrega?c.entrega.itens:[]).forEach(function(x){if(x.ref===r)n+=x.entregue;});c.emMaos.forEach(function(x){if(x.ref===r)n+=x.qtd;});if(n)l.push(c.nome+' ('+n+')');});return l;}
-function pfVazio(){return {ref:'',nome:'',custo:'',valor:'',msg:'',erro:false,mar:'50',com:'30',edit:null,delOk:false};}
+function ganhoV(v){return v.ganho!=null?v.ganho:r2(v.base*0.2);}
+function custoI(x){return x.custo!=null?x.custo:(S.prod[x.ref]&&S.prod[x.ref].custo!=null?S.prod[x.ref].custo:null);}
+function lj(c){return !!c&&c.tipo==='lojista';}
+function tagLj(c){return lj(c)?' <span class="badge blj">Lojista'+(c.loja?' · '+esc(c.loja):'')+'</span>':'';}
+function r90(x){x=r2(x);var sg=Math.ceil(x)-0.10;if(sg<x)sg=Math.ceil(x)+0.90;return r2(sg);}
+function pfVazio(){return {pl:'',ref:'',nome:'',custo:'',valor:'',msg:'',erro:false,mar:'50',com:'30',edit:null,delOk:false};}
 function mk(a){return a.map(function(x){return {ref:x[0],entregue:x[1],vendida:0,devolvida:0};});}
 function ent(data,itens,prev){return {data:data,prevista:prev||addD(data,60),itens:mk(itens)};}
 function seg(s){return D(s).getUTCDay()===1;}
@@ -135,7 +141,7 @@ var S={
  vendedores:[],setup:{nome:'',login:'',senha:'',senha2:'',praca:'',erro:''},
  vf:null,
  prod:{},
- pf:{ref:'',nome:'',custo:'',valor:'',msg:'',erro:false,mar:'50',com:'30',edit:null,delOk:false},
+ pf:{pl:'',ref:'',nome:'',custo:'',valor:'',msg:'',erro:false,mar:'50',com:'30',edit:null,delOk:false},
  cons:[
  ],
  pag:{aberto:false,forma:'Pix'},
@@ -186,7 +192,7 @@ function nav(on){
  return '<nav aria-label="Menu principal">'+it.map(function(x){return '<button data-act="tab" data-to="'+x[0]+'" class="'+(x[0]===on?'on':'')+'">'+x[2]+x[1]+'</button>';}).join('')+'</nav>';
 }
 function hdrW(t,sub){return '<header class="hw"><div class="hrow"><button class="back" data-act="back" aria-label="Voltar">'+IC.back+'</button><div><h1 style="font-size:20px">'+t+'</h1>'+(sub?'<div class="sub">'+sub+'</div>':'')+'</div></div></header>';}
-function rowC(c,sub){var b=badge(c);return '<button class="card" data-act="ficha" data-id="'+c.id+'" style="flex-direction:row;align-items:center;gap:12px;padding:12px 14px"><span class="av">'+ini(c.nome)+'</span><span style="flex:1;display:flex;flex-direction:column;gap:2px;min-width:0"><strong>'+esc(c.nome)+'</strong><span style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">'+tagCid(c)+'<span class="mu">'+esc(sub||(c.bairro+' · '+pecas(c)+' peças'))+'</span></span></span><span class="badge '+b[0]+'">'+b[1]+'</span></button>';}
+function rowC(c,sub){var b=badge(c);return '<button class="card" data-act="ficha" data-id="'+c.id+'" style="flex-direction:row;align-items:center;gap:12px;padding:12px 14px"><span class="av">'+ini(c.nome)+'</span><span style="flex:1;display:flex;flex-direction:column;gap:2px;min-width:0"><strong>'+esc(c.nome)+'</strong>'+tagLj(c)+'<span style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">'+tagCid(c)+'<span class="mu">'+esc(sub||(c.bairro+' · '+pecas(c)+' peças'))+'</span></span></span><span class="badge '+b[0]+'">'+b[1]+'</span></button>';}
 
 var V={};
 V.inicio=function(){
@@ -225,7 +231,7 @@ V.agenda=function(){
  (p.length?'<p class="mu" style="margin:0">'+p.length+' acerto(s), agrupados por cidade.</p>'+((a==='hoje'||a==='atrasado')?'<button class="btn bl" data-act="go" data-to="rota">'+IC.pin+'Montar rota otimizada</button>':''):'<div class="ok">Nenhum acerto nesta lista.</div>')+
  o.map(function(k){var pr=k.split('|')[0],cid=k.split('|')[1],cor=corCid(pr,cid),l=g[k].sort(function(x,y){return x.bairro.localeCompare(y.bairro);});
   return '<section style="display:flex;flex-direction:column;gap:10px"><p class="sec" style="display:flex;align-items:center;gap:8px;color:'+cor+'"><i style="width:10px;height:10px;border-radius:5px;background:'+cor+';display:inline-block"></i>'+esc(cid)+(PR(pr).cidades[0].nome===cid?' (principal)':'')+(S.praca==='todas'?' · praça '+esc(pr):'')+' · '+l.length+'</p>'+l.map(function(c){var bd=badge(c);
-  return '<article class="card" style="gap:10px"><div class="row" style="align-items:flex-start"><button data-act="ficha" data-id="'+c.id+'" style="border:0;background:none;padding:0;text-align:left;font:inherit;color:inherit;cursor:pointer;display:flex;flex-direction:column;gap:2px"><strong style="font-size:16px">'+esc(c.nome)+'</strong><span class="mu">'+esc(c.rua)+' – '+esc(c.bairro)+'</span></button><span class="badge '+bd[0]+'">'+bd[1]+'</span></div><span style="font-size:13px">'+pecas(c)+' peças em mãos · entregue em '+br(c.entrega.data)+' · acerto '+brY(c.entrega.prevista)+'</span>'+(c.pendente?'<span class="badge bwa" style="align-self:flex-start">Pendente: '+esc(c.pendente.motivo)+' (visita de '+br(c.pendente.em)+')</span>':'')+(S.rs.sel[c.id]?'<span class="badge bok" style="align-self:flex-start">✓ Confirmada na rota</span>':'')+
+  return '<article class="card" style="gap:10px"><div class="row" style="align-items:flex-start"><button data-act="ficha" data-id="'+c.id+'" style="border:0;background:none;padding:0;text-align:left;font:inherit;color:inherit;cursor:pointer;display:flex;flex-direction:column;gap:2px"><strong style="font-size:16px">'+esc(c.nome)+'</strong>'+tagLj(c)+'<span class="mu">'+esc(c.rua)+' – '+esc(c.bairro)+'</span></button><span class="badge '+bd[0]+'">'+bd[1]+'</span></div><span style="font-size:13px">'+pecas(c)+' peças em mãos · entregue em '+br(c.entrega.data)+' · acerto '+brY(c.entrega.prevista)+'</span>'+(c.pendente?'<span class="badge bwa" style="align-self:flex-start">Pendente: '+esc(c.pendente.motivo)+' (visita de '+br(c.pendente.em)+')</span>':'')+(S.rs.sel[c.id]?'<span class="badge bok" style="align-self:flex-start">✓ Confirmada na rota</span>':'')+
   '<div class="g3" style="gap:8px"><a class="btn bp" style="font-size:14px;min-height:44px;padding:0" target="_blank" rel="noopener" href="'+maps(endC(c))+'">'+IC.pin+'Rota</a><a class="btn bl" style="font-size:14px;min-height:44px;padding:0" target="_blank" rel="noopener" href="'+wa(c.tel)+'">'+IC.chat+'WhatsApp</a><button class="btn bs" style="font-size:14px;min-height:44px;padding:0" data-act="acerto" data-id="'+c.id+'">Acertar</button></div></article>';}).join('')+'</section>';}).join('')+
  '</main>'+nav('agenda');
 };
@@ -239,7 +245,7 @@ V.rota=function(){
   '<div class="tabs" role="tablist" style="display:flex;overflow-x:auto">'+tabs.map(function(t){return '<button role="tab" class="tab '+(rs.filtro===t[0]?'on':'')+'" style="flex:1 0 auto;padding:0 10px" data-act="rsFiltro" data-v="'+t[0]+'">'+t[1]+'</button>';}).join('')+'</div>'+
   '<div class="row"><span class="mu">'+l.length+' consultora(s) nesta lista</span><span style="display:flex;gap:4px"><button class="btn" style="min-height:40px;background:none;color:var(--ac);font-size:14px;padding:0 8px" data-act="rsTodas">Marcar todas</button><button class="btn" style="min-height:40px;background:none;color:var(--mu);font-size:14px;padding:0 8px" data-act="rsLimpar">Limpar</button></span></div>'+
   (l.length?l.map(function(c){var on=!!rs.sel[c.id],bd=badge(c);
-   return '<button class="card" role="checkbox" aria-checked="'+on+'" data-act="rsTog" data-id="'+c.id+'" style="flex-direction:row;align-items:center;gap:12px;padding:12px 14px;'+(on?'border:2px solid var(--ac);background:#F4FAF8':'')+'"><span aria-hidden="true" style="width:26px;height:26px;border-radius:7px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-weight:700;'+(on?'background:var(--ac);color:#fff':'border:2px solid var(--bd2);color:transparent')+'">✓</span><span style="flex:1;display:flex;flex-direction:column;gap:4px;min-width:0"><strong>'+esc(c.nome)+'</strong><span style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">'+tagCid(c)+'<span class="mu">'+esc(c.bairro)+(S.praca==='todas'?' · '+esc(c.praca):'')+'</span></span></span><span class="badge '+bd[0]+'">'+bd[1]+'</span></button>';}).join('')
+   return '<button class="card" role="checkbox" aria-checked="'+on+'" data-act="rsTog" data-id="'+c.id+'" style="flex-direction:row;align-items:center;gap:12px;padding:12px 14px;'+(on?'border:2px solid var(--ac);background:#F4FAF8':'')+'"><span aria-hidden="true" style="width:26px;height:26px;border-radius:7px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-weight:700;'+(on?'background:var(--ac);color:#fff':'border:2px solid var(--bd2);color:transparent')+'">✓</span><span style="flex:1;display:flex;flex-direction:column;gap:4px;min-width:0"><strong>'+esc(c.nome)+'</strong>'+tagLj(c)+'<span style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">'+tagCid(c)+'<span class="mu">'+esc(c.bairro)+(S.praca==='todas'?' · '+esc(c.praca):'')+'</span></span></span><span class="badge '+bd[0]+'">'+bd[1]+'</span></button>';}).join('')
   :'<div class="ok">Nenhuma consultora com acerto em aberto nesta lista.</div>')+
   '</main><div style="padding:12px 20px;background:#fff;border-top:1px solid var(--bd)"><button class="btn bp" style="width:100%;min-height:52px'+(n?'':';opacity:.5')+'" data-act="rsVer"'+(n?'':' disabled')+'>'+IC.pin+'Otimizar rota ('+n+' selecionada'+(n===1?'':'s')+')</button></div>';
  }
@@ -251,7 +257,7 @@ V.rota=function(){
   return '<section style="display:flex;flex-direction:column;gap:10px">'+(S.praca==='todas'?'<h2>Praça '+esc(r.pr)+'</h2>':'')+
   '<div class="card" style="padding:12px 14px;flex-direction:row;align-items:center;gap:10px"><span class="ic" style="background:#EEF1EF;color:var(--mu)">'+IC.pin+'</span><span>Saída: centro de <strong>'+esc(r.ini)+'</strong></span></div>'+
   st2.map(function(x,i){var c=x.c,acao=c.entrega?'<button class="btn bs" style="min-height:44px;font-size:14px;padding:0 12px" data-act="acerto" data-id="'+c.id+'">Acertar</button>':'<button class="btn bs" style="min-height:44px;font-size:14px;padding:0 12px" data-act="ficha" data-id="'+c.id+'">Receber</button>';
-   return '<article class="card" style="flex-direction:row;align-items:center;gap:12px;padding:12px 14px"><span class="ic" style="background:var(--ac);color:#fff">'+(i+1)+'</span><span style="flex:1;display:flex;flex-direction:column;gap:4px;min-width:0"><strong>'+esc(c.nome)+'</strong><span style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">'+tagCid(c)+'<span class="mu">'+esc(c.bairro)+'</span></span><span class="mu" style="font-size:12px">'+(x.d==null?'sem localização':fkm(x.d)+(i?' da anterior':' da saída'))+(c.entrega&&st(c)==='atrasado'?' · atrasada':'')+(c.pendente?' · pendente':'')+(c.saldo>0?' · deve '+fmt(c.saldo):'')+'</span></span>'+acao+'</article>';}).join('')+
+   return '<article class="card" style="flex-direction:row;align-items:center;gap:12px;padding:12px 14px"><span class="ic" style="background:var(--ac);color:#fff">'+(i+1)+'</span><span style="flex:1;display:flex;flex-direction:column;gap:4px;min-width:0"><strong>'+esc(c.nome)+'</strong>'+tagLj(c)+'<span style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">'+tagCid(c)+'<span class="mu">'+esc(c.bairro)+'</span></span><span class="mu" style="font-size:12px">'+(x.d==null?'sem localização':fkm(x.d)+(i?' da anterior':' da saída'))+(c.entrega&&st(c)==='atrasado'?' · atrasada':'')+(c.pendente?' · pendente':'')+(c.saldo>0?' · deve '+fmt(c.saldo):'')+'</span></span>'+acao+'</article>';}).join('')+
   '<div class="row" style="padding:0 2px"><span>Percurso total (aprox.)</span><strong>'+fkm(r.tot)+'</strong></div>'+
   '<a class="btn bp" target="_blank" rel="noopener" href="'+url+'">'+IC.pin+'Abrir rota no Google Maps</a></section>';}).join('')
  :'<div class="ok">As consultoras selecionadas já foram atendidas.</div>')+
@@ -271,7 +277,7 @@ V.ficha=function(){
   '<div class="row"><span style="color:var(--wa)">Saldo devedor</span><span class="big" style="color:var(--wa)">'+fmt(c.saldo)+'</span></div>'+
   (pg.aberto?'<div style="background:#fff;border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:10px;color:var(--tx)"><strong style="font-size:13px">Forma de pagamento</strong><div class="g2" style="gap:8px">'+
    ['Pix','Dinheiro'].map(function(f){var on=pg.forma===f;return '<button class="btn '+(on?'bl':'bs')+'" style="min-height:44px;'+(on?'border:2px solid var(--ac)':'')+'" data-act="pgForma" data-v="'+f+'" aria-pressed="'+on+'">'+f+'</button>';}).join('')+
-   '</div><span class="mu">Quitação total · comissão do vendedor: '+fmt(r2(c.saldo*0.2))+'</span><button class="btn bp" data-act="pgOk">Confirmar '+fmt(c.saldo)+'</button></div>'
+   '</div><span class="mu">Quitação total · '+(lj(c)?'seu ganho: '+fmt(r2(c.saldo*(c.ljRatio||0))):'comissão do vendedor: '+fmt(r2(c.saldo*0.2)))+'</span><button class="btn bp" data-act="pgOk">Confirmar '+fmt(c.saldo)+'</button></div>'
    :'<button class="btn bp" data-act="pgOpen">Registrar pagamento</button>')+'</section>';
  } else if(s==='livre'){
   box='<section class="ok"><strong>Liberada · sem acerto em aberto</strong><span style="font-size:13px">'+(pecas(c)?pecas(c)+' peça(s) do último ciclo continuam com ela e entram na próxima entrega.':'Nenhuma peça em mãos.')+'</span><button class="btn bp" data-act="neFor" data-id="'+c.id+'">Fazer nova entrega</button></section>';
@@ -281,8 +287,8 @@ V.ficha=function(){
  }
  var tt=S.toast;S.toast='';
  return '<header class="hg" style="padding-top:12px"><div class="row"><button class="back" data-act="back" aria-label="Voltar">'+IC.back+'</button><button class="back" data-act="edOpen" data-id="'+c.id+'" aria-label="Editar cadastro">'+IC.edit+'</button></div>'+
- '<div class="hrow" style="gap:14px"><span class="av" style="width:56px;height:56px;border-radius:28px;background:#fff;font-size:20px;font-family:Space Grotesk,sans-serif;font-weight:700">'+ini(c.nome)+'</span><div><h1>'+esc(c.nome)+'</h1><div class="sub">'+esc(c.tel)+' · '+esc(c.rua)+' – '+esc(c.bairro)+', '+esc(c.cidade)+(c.ref?' · '+esc(c.ref):'')+'</div></div></div></header><main>'+(tt?'<div class="ok">'+esc(tt)+'</div>':'')+box+
- '<div class="g3"><div class="card" style="padding:12px;gap:4px"><span class="mu" style="font-size:12px">Peças em mãos</span><span class="mid">'+pecas(c)+'</span></div><div class="card" style="padding:12px;gap:4px"><span class="mu" style="font-size:12px">Próx. acerto</span><span class="mid" style="font-size:17px">'+(c.entrega?br(c.entrega.prevista):'—')+'</span></div><div class="card" style="padding:12px;gap:4px"><span class="mu" style="font-size:12px">Última faixa</span><span class="mid">'+c.ultFaixa+'%</span></div></div>'+
+ '<div class="hrow" style="gap:14px"><span class="av" style="width:56px;height:56px;border-radius:28px;background:#fff;font-size:20px;font-family:Space Grotesk,sans-serif;font-weight:700">'+ini(c.nome)+'</span><div><h1>'+esc(c.nome)+'</h1>'+(lj(c)?'<span class="badge" style="background:#fff;color:#4338CA;align-self:flex-start">Lojista'+(c.loja?' · '+esc(c.loja):'')+'</span>':'')+'<div class="sub">'+esc(c.tel)+' · '+esc(c.rua)+' – '+esc(c.bairro)+', '+esc(c.cidade)+(c.ref?' · '+esc(c.ref):'')+'</div></div></div></header><main>'+(tt?'<div class="ok">'+esc(tt)+'</div>':'')+box+
+ '<div class="g3"><div class="card" style="padding:12px;gap:4px"><span class="mu" style="font-size:12px">Peças em mãos</span><span class="mid">'+pecas(c)+'</span></div><div class="card" style="padding:12px;gap:4px"><span class="mu" style="font-size:12px">Próx. acerto</span><span class="mid" style="font-size:17px">'+(c.entrega?br(c.entrega.prevista):'—')+'</span></div><div class="card" style="padding:12px;gap:4px"><span class="mu" style="font-size:12px">'+(lj(c)?'Tipo':'Última faixa')+'</span><span class="mid" style="'+(lj(c)?'font-size:16px':'')+'">'+(lj(c)?'Lojista':c.ultFaixa+'%')+'</span></div></div>'+
  '<div class="g2"><a class="btn bl" style="min-height:44px" target="_blank" rel="noopener" href="'+maps(endC(c))+'">'+IC.pin+'Abrir rota</a><a class="btn bl" style="min-height:44px" target="_blank" rel="noopener" href="'+wa(c.tel)+'">'+IC.chat+'WhatsApp</a></div>'+
  '<button class="btn bs" data-act="edOpen" data-id="'+c.id+'">'+IC.edit+'Editar cadastro e endereço</button>'+
  '<section class="card" style="gap:6px"><h2>Dados</h2><div class="row"><span class="mu">Endereço</span><span style="text-align:right">'+esc(c.rua)+' – '+esc(c.bairro)+'</span></div>'+(c.cep?'<div class="row"><span class="mu">CEP</span><span>'+esc(c.cep)+'</span></div>':'')+'<div class="row"><span class="mu">Cidade</span>'+tagCid(c)+'</div><div class="row"><span class="mu">Localização</span><span>'+(c.lat==null?'não marcada':(c.gps?'GPS (exata)':'aproximada'))+'</span></div>'+(c.ref?'<div class="row"><span class="mu">Referência</span><span style="text-align:right">'+esc(c.ref)+'</span></div>':'')+'<div class="row"><span class="mu">Telefone</span><span>'+esc(c.tel)+'</span></div>'+(c.cpf?'<div class="row"><span class="mu">CPF</span><span>'+esc(c.cpf)+'</span></div>':'')+(c.nasc?'<div class="row"><span class="mu">Nascimento</span><span>'+brY(c.nasc)+'</span></div>':'')+'</section>'+
@@ -290,34 +296,33 @@ V.ficha=function(){
  '</main>'+nav('consultoras');
 };
 function calc(){
- var a=S.ac,t=0,qv=0,qf=0;a.itens.forEach(function(x){t+=x.vendida*prI(x);qv+=x.vendida;qf+=x.entregue-x.vendida-x.devolvida;});
- t=r2(t);var p=faixa(t),com=r2(t*p/100),dev=r2(t-com);
+ var a=S.ac,t=0,qv=0,qf=0,qd=0,gl=0,semC=0;a.itens.forEach(function(x){x.vendida=x.entregue-x.devolvida;t+=x.vendida*prI(x);qv+=x.vendida;qd+=x.devolvida;var cu=custoI(x);if(x.vendida>0){if(cu==null)semC+=x.vendida;else gl+=x.vendida*(prI(x)-cu);}});gl=r2(gl);
+ t=r2(t);var LJ=lj(getC(a.id)),p=LJ?0:faixa(t),com=r2(t*p/100),dev=r2(t-com);
  var pt=a.pagoTexto===null?dev.toFixed(2).replace('.',','):a.pagoTexto,pg=Math.min(Math.max(num(pt),0),dev);
- return {t:t,qv:qv,qf:qf,p:p,com:com,dev:dev,pt:pt,pg:r2(pg),saldo:r2(dev-pg),cv:r2(pg*0.2),
-  dica:t===0?'Nenhuma peça marcada como vendida.':p===30?'Faltam '+fmt(500.01-t)+' para a faixa de 35%.':p===35?'Faltam '+fmt(1000.01-t)+' para a faixa de 40%.':'Faixa máxima atingida.'};
+ return {qd:qd,t:t,qv:qv,qf:qf,p:p,com:com,dev:dev,pt:pt,pg:r2(pg),saldo:r2(dev-pg),gl:gl,semC:semC,ratio:LJ&&dev>0?gl/dev:0,cv:LJ?(dev>0?r2(pg*gl/dev):0):r2(pg*0.2),
+  lj:LJ,dica:LJ?'Lojista: sem comissão. Ele paga o preço de repasse de cada peça vendida.':t===0?'Todas as peças voltaram: nada a receber.':p===30?'Faltam '+fmt(500.01-t)+' para a faixa de 35%.':p===35?'Faltam '+fmt(1000.01-t)+' para a faixa de 40%.':'Faixa máxima atingida.'};
 }
 V.acerto=function(){
  var a=S.ac,c=getC(a.id);
  if(a.res){var r=a.res;
-  return hdrW('Acerto · '+esc(c.nome))+'<main><div style="display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center"><span class="av" style="width:64px;height:64px;border-radius:32px">'+IC.done+'</span><h2 style="font-size:22px">Acerto registrado</h2><span class="mu" style="font-size:14px">'+fmt(r.pg)+' lançado no caixa · '+fmt(r.cv)+' de comissão para o vendedor</span></div>'+
-  '<div class="card"><div class="row"><span>Total vendido</span><strong>'+fmt(r.t)+'</strong></div><div class="row"><span>Comissão da consultora ('+r.p+'%)</span><strong>'+fmt(r.com)+'</strong></div><div class="row"><span>Valor pago</span><strong>'+fmt(r.pg)+'</strong></div><div class="row"><span>Saldo devedor</span><strong style="color:'+(r.saldo>0?'var(--wa)':'var(--ac)')+'">'+fmt(r.saldo)+'</strong></div></div>'+
+  return hdrW('Acerto · '+esc(c.nome))+'<main><div style="display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center"><span class="av" style="width:64px;height:64px;border-radius:32px">'+IC.done+'</span><h2 style="font-size:22px">Acerto registrado</h2><span class="mu" style="font-size:14px">'+fmt(r.pg)+' lançado no caixa · '+fmt(r.cv)+(r.lj?' de ganho do vendedor':' de comissão para o vendedor')+'</span></div>'+
+  '<div class="card"><div class="row"><span>Total vendido</span><strong>'+fmt(r.t)+'</strong></div>'+(r.lj?'':'<div class="row"><span>Comissão da consultora ('+r.p+'%)</span><strong>'+fmt(r.com)+'</strong></div>')+'<div class="row"><span>Valor pago</span><strong>'+fmt(r.pg)+'</strong></div><div class="row"><span>Saldo devedor</span><strong style="color:'+(r.saldo>0?'var(--wa)':'var(--ac)')+'">'+fmt(r.saldo)+'</strong></div></div>'+
   (r.saldo>0?'<div class="warn">'+esc(c.nome)+' ficou com '+fmt(r.saldo)+' em aberto e está bloqueada para nova entrega até quitar (pode ser por Pix).</div>'
-   :'<div class="ok">Acerto quitado. '+esc(c.nome)+' saiu da lista de acertos em aberto.'+(r.qf?' '+r.qf+' peça(s) continuam com ela e entram na próxima entrega.':'')+'</div><button class="btn bp" data-act="neFor" data-id="'+c.id+'">Fazer nova entrega (novo acerto em 60 dias)</button>')+
+   :'<div class="ok">Acerto quitado. '+esc(c.nome)+' saiu da lista de acertos em aberto.'+'</div><button class="btn bp" data-act="neFor" data-id="'+c.id+'">Fazer nova entrega (novo acerto em 60 dias)</button>')+
   (function(){var mp=maisPerto(c);return mp?'<section class="card" style="gap:8px"><span class="mu">Próxima consultora mais perto</span><div class="row"><span style="display:flex;flex-direction:column;gap:4px"><strong>'+esc(mp.c.nome)+'</strong><span style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">'+tagCid(mp.c)+'<span class="mu">'+esc(mp.c.bairro)+'</span></span></span><strong>'+fkm(mp.d)+'</strong></div><div class="g2"><a class="btn bl" style="min-height:44px" target="_blank" rel="noopener" href="'+maps(endC(mp.c))+'">'+IC.pin+'Ir até ela</a><button class="btn bp" style="min-height:44px" data-act="acerto" data-id="'+mp.c.id+'">Acertar</button></div></section>':'';})()+
   '<a class="btn bs" target="_blank" rel="noopener" href="'+wa(c.tel)+'?text='+encodeURIComponent('Recibo do acerto – '+c.nome+'\nTotal vendido: '+fmt(r.t)+'\nComissão ('+r.p+'%): '+fmt(r.com)+'\nValor pago: '+fmt(r.pg)+'\nSaldo devedor: '+fmt(r.saldo))+'">Enviar recibo no WhatsApp</a>'+
   '<button class="btn" style="background:none;color:var(--ac)" data-act="tab" data-to="inicio">Voltar ao início</button></main>';
  }
  var k=calc(),tot=0;a.itens.forEach(function(x){tot+=x.entregue;});
- return hdrW('Acerto · '+esc(c.nome),'Entrega de '+brY(c.entrega.data)+' · '+tot+' peças')+'<main><p class="mu" style="margin:0">Marque o que ela vendeu e o que devolveu. O restante continua com ela.</p>'+
- a.itens.map(function(x,i){var p={nome:nomeP(x.ref),preco:prI(x)};return '<article class="card" style="gap:10px;padding:12px 14px"><div class="row" style="align-items:flex-start"><span style="display:flex;flex-direction:column;gap:2px"><strong style="font-size:15px">'+esc(p.nome)+'</strong><span class="mu" style="font-size:12px">REF '+x.ref+' · etiqueta '+fmt(p.preco)+' · levou '+x.entregue+'</span></span><span class="mu" style="font-size:12px;text-align:right">fica<br><strong style="font-size:16px;color:var(--tx)">'+(x.entregue-x.vendida-x.devolvida)+'</strong></span></div>'+
-  '<div class="g2"><div class="step" style="background:var(--acl)"><button class="sb" style="background:#fff;color:var(--ac)" data-act="acQ" data-i="'+i+'" data-c="vendida" data-d="-1" aria-label="Menos uma vendida">−</button><span style="display:flex;flex-direction:column;align-items:center;color:var(--ac2)"><strong style="font-size:16px">'+x.vendida+'</strong><span style="font-size:11px">vendidas</span></span><button class="sb" style="background:var(--ac);color:#fff" data-act="acQ" data-i="'+i+'" data-c="vendida" data-d="1" aria-label="Mais uma vendida">+</button></div>'+
-  '<div class="step" style="background:#EEF1EF"><button class="sb" style="background:#fff;color:var(--tx)" data-act="acQ" data-i="'+i+'" data-c="devolvida" data-d="-1" aria-label="Menos uma devolvida">−</button><span style="display:flex;flex-direction:column;align-items:center"><strong style="font-size:16px">'+x.devolvida+'</strong><span style="font-size:11px;color:var(--mu)">devolvidas</span></span><button class="sb" style="background:var(--mu);color:#fff" data-act="acQ" data-i="'+i+'" data-c="devolvida" data-d="1" aria-label="Mais uma devolvida">+</button></div></div></article>';}).join('')+
- '<section class="card" style="padding:16px;gap:10px"><h2>Resumo</h2><div class="row"><span>Peças vendidas</span><strong>'+k.qv+'</strong></div><div class="row"><span>Total vendido</span><strong>'+fmt(k.t)+'</strong></div><div class="row"><span>Comissão da consultora ('+k.p+'%)</span><strong>− '+fmt(k.com)+'</strong></div>'+
- '<span class="mu" style="font-size:12px">Faixas: até R$ 500 = 30% · acima de R$ 500 = 35% · acima de R$ 1.000 = 40%. '+k.dica+'</span>'+
+ return hdrW('Acerto · '+esc(c.nome),'Entrega de '+brY(c.entrega.data)+' · '+tot+' peças')+'<main><p class="mu" style="margin:0">Conte as peças que '+(k.lj?'o lojista':'ela')+' está devolvendo. Tudo o que não voltou conta como vendido.</p>'+
+ '<div class="g2" style="gap:8px"><button class="btn bs" style="min-height:44px;font-size:13px" data-act="acDevZero">Nada voltou</button><button class="btn bs" style="min-height:44px;font-size:13px" data-act="acDevAll">Tudo voltou</button></div>'+
+ a.itens.map(function(x,i){var p={nome:nomeP(x.ref),preco:prI(x)},vend=x.entregue-x.devolvida;return '<article class="card" style="gap:10px;padding:12px 14px"><div class="row" style="align-items:flex-start"><span style="display:flex;flex-direction:column;gap:2px"><strong style="font-size:15px">'+esc(p.nome)+'</strong><span class="mu" style="font-size:12px">REF '+x.ref+' · '+(k.lj?'preço lojista ':'etiqueta ')+fmt(p.preco)+' · levou '+x.entregue+'</span></span><span class="mu" style="font-size:12px;text-align:right">vendeu<br><strong style="font-size:18px;color:var(--ac2)">'+vend+'</strong></span></div>'+
+  '<div style="display:flex;align-items:center;gap:8px"><div class="step" style="background:#EEF1EF;flex:1"><button class="sb" style="background:#fff;color:var(--tx)" data-act="acDev" data-i="'+i+'" data-d="-1" aria-label="Menos uma devolvida">−</button><span style="display:flex;flex-direction:column;align-items:center"><strong style="font-size:18px">'+x.devolvida+'</strong><span style="font-size:11px;color:var(--mu)">devolvidas</span></span><button class="sb" style="background:var(--mu);color:#fff" data-act="acDev" data-i="'+i+'" data-d="1" aria-label="Mais uma devolvida">+</button></div><button class="btn bs" style="min-height:48px;font-size:13px;padding:0 10px" data-act="acDevTudo" data-i="'+i+'">'+(x.devolvida===x.entregue?'Zerar':'Voltou tudo')+'</button></div></article>';}).join('')+
+ '<section class="card" style="padding:16px;gap:10px"><h2>Resumo</h2><div class="row"><span>Peças devolvidas</span><strong>'+k.qd+'</strong></div><div class="row"><span>Peças vendidas</span><strong>'+k.qv+'</strong></div><div class="row"><span>Total vendido</span><strong>'+fmt(k.t)+'</strong></div>'+(k.lj?'<span class="mu" style="font-size:12px">'+k.dica+'</span>':'<div class="row"><span>Comissão da consultora ('+k.p+'%)</span><strong>− '+fmt(k.com)+'</strong></div><span class="mu" style="font-size:12px">Faixas: até R$ 500 = 30% · acima de R$ 500 = 35% · acima de R$ 1.000 = 40%. '+k.dica+'</span>')+
  '<div class="row" style="border-top:1px solid var(--bd);padding-top:10px"><strong>Valor devido</strong><span class="mid">'+fmt(k.dev)+'</span></div>'+
  '<div class="fld"><label for="pago">Valor pago agora (R$)</label><input id="pago" inputmode="decimal" value="'+esc(k.pt)+'" data-in="acPago"></div>'+
  '<div class="g2" style="gap:8px">'+['Pix','Dinheiro'].map(function(f){var on=a.forma===f;return '<button class="btn '+(on?'bl':'bs')+'" style="min-height:44px;'+(on?'border:2px solid var(--ac)':'')+'" data-act="acForma" data-v="'+f+'" aria-pressed="'+on+'">'+f+'</button>';}).join('')+'</div>'+
- '<div class="row"><span>Saldo devedor</span><strong id="acSaldo" style="color:'+(k.saldo>0?'var(--wa)':'var(--ac)')+'">'+fmt(k.saldo)+'</strong></div><div class="row"><span>Comissão do vendedor (20% do pago)</span><strong id="acCv">'+fmt(k.cv)+'</strong></div>'+
+ '<div class="row"><span>Saldo devedor</span><strong id="acSaldo" style="color:'+(k.saldo>0?'var(--wa)':'var(--ac)')+'">'+fmt(k.saldo)+'</strong></div>'+(k.lj?'<div class="row"><span>Seu ganho (preço lojista − custo)</span><strong id="acCv" style="color:var(--ac2)">'+fmt(k.cv)+'</strong></div><span class="mu" style="font-size:12px">Ganho total nas peças vendidas: '+fmt(k.gl)+'. Se ele pagar só uma parte, o ganho entra proporcional ao valor pago.'+(k.semC?' Atenção: '+k.semC+' peça(s) vendida(s) sem custo cadastrado não entram no ganho.':'')+'</span>':'<div class="row"><span>Comissão do vendedor (20% do pago)</span><strong id="acCv">'+fmt(k.cv)+'</strong></div>')+
  '<button class="btn bp" style="min-height:52px" data-act="acOk">Confirmar acerto</button></section>'+
  (a.pend?'<section class="warn" style="color:var(--tx)"><strong style="color:var(--wa)">Acerto não realizado</strong><span class="mu">Motivo</span><div style="display:flex;flex-direction:column;gap:8px">'+
   ['Peças não recuperadas','Consultora não localizada'].map(function(m){var on=a.motivo===m;return '<button class="btn '+(on?'bl':'bs')+'" style="min-height:44px;'+(on?'border:2px solid var(--ac)':'')+'" aria-pressed="'+on+'" data-act="acMotivo" data-v="'+m+'">'+m+'</button>';}).join('')+'</div>'+
@@ -330,8 +335,10 @@ V.novacons=function(){
  var f=S.novo,ed=!!f.edit,pr=ed?f.praca:(S.praca==='todas'?f.praca:S.praca),P=PR(pr);
  var inp=function(x){return '<div class="fld"><label for="nv-'+x[0]+'">'+x[1]+'</label><input id="nv-'+x[0]+'" type="'+x[2]+'"'+(x[3]?' placeholder="'+x[3]+'"':'')+(x[4]?' inputmode="'+x[4]+'"':'')+' value="'+esc(f[x[0]])+'" data-in="nvF" data-f="'+x[0]+'"></div>';};
  var g=f.geo||{};
- return hdrW(ed?'Editar consultora':'Nova consultora',ed?'Pode alterar mesmo com acerto em aberto':'Cadastro para receber mercadoria')+'<main><section class="card" style="padding:16px;gap:12px">'+
- [['nome','Nome completo','text','Ex.: Maria da Silva Santos',''],['nasc','Data de nascimento','date','',''],['cpf','CPF','text','000.000.000-00','numeric'],['tel','Telefone','tel','(27) 9 0000-0000','tel']].map(inp).join('')+
+ return hdrW(ed?(f.tipo==='lojista'?'Editar lojista':'Editar consultora'):(f.tipo==='lojista'?'Novo lojista':'Nova consultora'),ed?'Pode alterar mesmo com acerto em aberto':'Cadastro para receber mercadoria')+'<main><section class="card" style="padding:16px;gap:12px">'+
+ '<div class="fld"><span style="font-size:13px;font-weight:600">Tipo de parceiro</span><div class="g2" style="gap:8px">'+[['consultora','Consultora','com comissão'],['lojista','Lojista','preço fixo']].map(function(t){var on=(f.tipo||'consultora')===t[0];return '<button class="btn '+(on?'bp':'bs')+'" style="min-height:52px;flex-direction:column;gap:0" aria-pressed="'+on+'" data-act="nvTipo" data-v="'+t[0]+'"><span>'+t[1]+'</span><span style="font-size:11px;font-weight:500">'+t[2]+'</span></button>';}).join('')+'</div></div>'+
+ (f.tipo==='lojista'?inp(['loja','Nome da loja','text','Ex.: Bella Moda',''])+inp(['nome','Nome do responsável','text','Ex.: Juliana Reis',''])+inp(['cpf','CPF ou CNPJ (opcional)','text','','numeric'])+inp(['tel','Telefone','tel','(27) 9 0000-0000','tel'])
+ :[['nome','Nome completo','text','Ex.: Maria da Silva Santos',''],['nasc','Data de nascimento','date','',''],['cpf','CPF','text','000.000.000-00','numeric'],['tel','Telefone','tel','(27) 9 0000-0000','tel']].map(inp).join(''))+
  (S.praca==='todas'&&!ed?'<div class="fld"><label for="nv-praca">Praça</label><select id="nv-praca" data-in="nvPraca">'+pNomes().map(function(p){return '<option'+(f.praca===p?' selected':'')+'>'+esc(p)+'</option>';}).join('')+'</select></div>':'<span class="mu">Praça: <strong>'+esc(pr)+'</strong></span>')+
  '<div style="border-top:1px solid var(--bd);padding-top:12px;display:flex;flex-direction:column;gap:10px"><h2 style="font-size:16px">Endereço</h2>'+
  '<div class="fld"><label for="nv-cep">CEP</label><div style="display:flex;gap:8px"><input id="nv-cep" inputmode="numeric" placeholder="00000-000" value="'+esc(f.cep)+'" data-in="nvF" data-f="cep" style="flex:1;min-width:0"><button class="btn bl" data-act="cepBuscar"'+(g.busy?' disabled style="opacity:.6"':'')+'>'+(g.busy==='cep'?'Buscando…':'Buscar')+'</button></div></div>'+
@@ -357,14 +364,14 @@ V.novaentrega=function(){
   body='<section class="warn"><div style="display:flex;align-items:center;gap:8px;color:var(--wa);font-weight:600">'+IC.lock+'Acerto pendente</div><span>'+esc(c.nome)+' ainda tem o acerto de '+brY(c.entrega.prevista)+' em aberto. Faça o acerto antes de uma nova entrega.</span><button class="btn bp" data-act="acerto" data-id="'+c.id+'">Fazer acerto agora</button></section>';
  } else {
   var q=0,v=0,prev=0;n.itens.forEach(function(x){q+=x.qtd;v+=x.qtd*prI(x);if(x.prev)prev+=x.qtd;});
-  body='<div class="ok" style="padding:10px 14px;font-size:13px;border-radius:12px">'+esc(c.nome)+' está liberada.'+(prev?' '+prev+' peça(s) do ciclo anterior já foram incluídas.':'')+'</div>'+
+  body='<div class="ok" style="padding:10px 14px;font-size:13px;border-radius:12px">'+esc(c.nome)+(lj(c)?' (lojista) está liberado. As peças entram pelo <strong>preço lojista</strong>.':' está liberada.')+(prev?' '+prev+' peça(s) do ciclo anterior já foram incluídas.':'')+'</div>'+
   '<div class="fld"><label for="ref">Referência da peça</label><div style="display:flex;gap:8px"><input id="ref" inputmode="numeric" placeholder="Ex.: 1023" value="'+esc(n.ref)+'" data-in="neRef" style="flex:1;min-width:0"><button class="btn bp" data-act="neAdd">Adicionar</button></div><span class="mu" style="font-size:12px">'+esc(n.msg||'Digite o código da etiqueta. O preço vem do cadastro do produto.')+'</span></div>'+
   n.itens.map(function(x,i){var p={nome:nomeP(x.ref),preco:prI(x)};return '<article class="card" style="flex-direction:row;align-items:center;gap:10px;padding:12px 14px"><span style="flex:1;display:flex;flex-direction:column;gap:2px;min-width:0"><strong style="font-size:15px">'+esc(p.nome)+'</strong><span class="mu" style="font-size:12px">REF '+x.ref+' · '+fmt(p.preco)+(x.prev?' · ciclo anterior':'')+'</span></span><button class="sb" style="border:1px solid var(--bd2);background:#fff" data-act="neQ" data-i="'+i+'" data-d="-1" aria-label="Diminuir">−</button><strong style="min-width:22px;text-align:center">'+x.qtd+'</strong><button class="sb" style="background:var(--ac);color:#fff" data-act="neQ" data-i="'+i+'" data-d="1" aria-label="Aumentar">+</button></article>';}).join('')+
-  '<section class="card" style="padding:16px"><div class="row"><span>Total de peças</span><strong>'+q+'</strong></div><div class="row"><span>Valor em etiqueta</span><strong>'+fmt(v)+'</strong></div>'+
+  '<section class="card" style="padding:16px"><div class="row"><span>Total de peças</span><strong>'+q+'</strong></div><div class="row"><span>'+(lj(c)?'Valor de repasse':'Valor em etiqueta')+'</span><strong>'+fmt(v)+'</strong></div>'+
   '<div class="fld"><label for="ne-dt">Data da entrega</label><input id="ne-dt" type="date" max="'+HOJE+'" value="'+n.dataEnt+'" data-in="neDt"><span class="mu" style="font-size:12px">Para consultoras que já estão com mercadoria, coloque a data em que você entregou.</span></div>'+escolhaData(addD(n.dataEnt,60),n.data,'neData')+''+
   '<button class="btn bp" style="min-height:52px;margin-top:4px'+(q?'':';opacity:.5')+'" data-act="neGerar"'+(q?'':' disabled')+'>Gerar romaneio</button></section>';
  }
- return hdrW('Nova entrega')+'<main>'+(n.ok?'':'<div class="fld"><label for="cons">Consultora</label><select id="cons" data-in="neCons">'+consV().slice().sort(function(a,b){return a.nome.localeCompare(b.nome);}).map(function(o){return '<option value="'+o.id+'"'+(o.id===n.cons?' selected':'')+'>'+esc(o.nome)+' – '+esc(o.bairro)+(S.praca==='todas'?' ('+esc(o.praca)+')':'')+'</option>';}).join('')+'</select>'+
+ return hdrW('Nova entrega')+'<main>'+(n.ok?'':'<div class="fld"><label for="cons">Consultora</label><select id="cons" data-in="neCons">'+consV().slice().sort(function(a,b){return a.nome.localeCompare(b.nome);}).map(function(o){return '<option value="'+o.id+'"'+(o.id===n.cons?' selected':'')+'>'+esc(o.nome)+(lj(o)?' (lojista)':'')+' – '+esc(o.bairro)+(S.praca==='todas'?' ('+esc(o.praca)+')':'')+'</option>';}).join('')+'</select>'+
  '<button class="btn bl" style="min-height:44px;margin-top:4px" data-act="nvOpen">+ Cadastrar nova consultora</button></div>')+body+'</main>';
 };
 function numP(t){var x=String(t||'').trim().replace(/\s/g,'').replace('R$','');if(x.indexOf(',')>=0)x=x.replace(/\./g,'').replace(',','.');var n=parseFloat(x);return isNaN(n)?null:n;}
@@ -387,7 +394,9 @@ V.produtos=function(){
    calc+='<section style="background:var(--ac);color:#fff;border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:4px"><span style="font-size:13px;color:#CFE6DF">Preço de etiqueta sugerido</span><strong class="num" style="font-size:40px;line-height:1.1">'+fmt(pc.sug)+'</strong><span style="font-size:13px;color:#CFE6DF">Preço exato pela conta: '+fmt(pc.exato)+'</span></section>'+
    '<section class="card" style="gap:10px"><h2 style="font-size:16px">Vendendo a '+fmt(pc.sug)+'</h2><div class="row"><span class="mu" style="font-size:14px">Consultora ('+pctT(com)+')</span><strong>'+fmt(vCom)+'</strong></div><div class="row"><span class="mu" style="font-size:14px">Custo da peça</span><strong>'+fmt(cu)+'</strong></div><div style="height:1px;background:var(--bd)"></div><div class="row" style="font-size:15px"><span style="font-weight:600">Seu lucro</span><strong style="color:var(--ac)">'+fmt(luc)+'</strong></div><span class="mu" style="font-size:12px">'+pctT(luc/cu*100)+' sobre o que você pagou</span></section>'+
    '<p class="mu" style="margin:0;font-size:12px;line-height:1.5">Conta usada: (custo + lucro desejado) ÷ (1 − comissão). A comissão sai do preço de venda, por isso não basta somar as porcentagens ao custo.</p>'+
-   '<button class="btn bp" data-act="pfUsar" data-v="'+pc.sug+'">Usar '+fmt(pc.sug)+' como valor da etiqueta</button>';}
+   '<button class="btn bp" data-act="pfUsar" data-v="'+pc.sug+'">Usar '+fmt(pc.sug)+' como valor da etiqueta</button>';
+   var plS=r90(cu*(1+mar/100)),plL=r2(plS-cu);
+   calc+='<section style="background:#EEF0FF;border:1px solid #C7CBF5;border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:6px"><span class="badge blj" style="align-self:flex-start">Lojista</span><div class="row"><span style="font-size:14px">Preço lojista sugerido</span><strong class="num" style="font-size:24px;color:#3730A3">'+fmt(plS)+'</strong></div><span class="mu" style="font-size:12px">O lojista te paga '+fmt(plS)+' por peça vendida e vende na loja pelo preço que quiser. Seu lucro: '+fmt(plL)+' ('+pctT(plL/cu*100)+' sobre o custo), sem comissão.</span><button class="btn" style="background:#4338CA;color:#fff" data-act="pfUsarL" data-v="'+plS+'">Usar '+fmt(plS)+' como preço lojista</button></section>';}
   calc+='</section>';}
  var ed=f.edit,uso=ed?usoProd(ed):[];
  return hdrW('Produtos',ks.length+' peças cadastradas')+'<main><section class="card" style="padding:16px;gap:12px;'+(ed?'border:2px solid var(--ac)':'')+'"><h2>'+(ed?'Editar produto':'Cadastrar produto')+'</h2>'+
@@ -395,12 +404,12 @@ V.produtos=function(){
  '<div class="fld"><label for="pf-nome">Nome da peça</label><input id="pf-nome" placeholder="Ex.: Saia plissada" value="'+esc(f.nome)+'" data-in="pfF" data-f="nome"></div>'+
  '<div class="fld"><label for="pf-custo">Quanto você pagou na peça (R$)</label><div style="display:flex;gap:8px"><input id="pf-custo" inputmode="decimal" placeholder="Ex.: 29,90" value="'+esc(f.custo)+'" data-in="pfF" data-f="custo" style="flex:1;min-width:0"><button class="btn bl" data-act="pfCalc">Calcular preço</button></div></div>'+
  calc+
- '<div class="fld"><label for="pf-valor">Valor da etiqueta (R$)</label><input id="pf-valor" inputmode="decimal" placeholder="0,00" value="'+esc(f.valor)+'" data-in="pfF" data-f="valor"></div>'+
+ '<div class="g2"><div class="fld"><label for="pf-valor">Etiqueta · consultora (R$)</label><input id="pf-valor" inputmode="decimal" placeholder="0,00" value="'+esc(f.valor)+'" data-in="pfF" data-f="valor"></div><div class="fld"><label for="pf-pl">Preço lojista (R$)</label><input id="pf-pl" inputmode="decimal" placeholder="0,00" value="'+esc(f.pl)+'" data-in="pfF" data-f="pl"></div></div>'+
  (f.msg?'<div class="'+(f.erro?'warn':'ok')+'" style="padding:12px;border-radius:12px">'+esc(f.msg)+'</div>':'')+
  (ed?'<div class="g2"><button class="btn bs" data-act="pfCancel">Cancelar</button><button class="btn bp" data-act="pfSave">Salvar alterações</button></div><button class="btn bw" data-act="pfDel">'+(f.delOk?'Toque de novo para excluir':'Excluir produto')+'</button>':'<button class="btn bp" data-act="pfSave">Salvar produto</button>')+'</section>'+
  '<h2>Peças cadastradas</h2>'+(ks.length?'<p class="mu" style="margin:0;font-size:12px">Toque numa peça para editar ou excluir.</p>':'<p class="mu">Nenhuma peça cadastrada ainda.</p>')+ks.map(function(k){var p=S.prod[k],ex='';
-  if(p.custo){var l=r2(p.preco*(1-(p.com!=null?p.com:30)/100)-p.custo);ex='<span class="mu" style="font-size:12px">custo '+fmt(p.custo)+' · seu lucro com comissão de '+(p.com!=null?p.com:30)+'%: '+fmt(l)+' ('+pctT(l/p.custo*100)+' sobre o custo)</span>';}
-  return '<button class="card" data-act="pfEdit" data-v="'+esc(k)+'" style="flex-direction:row;align-items:center;gap:12px;padding:12px 14px;'+(ed===k?'border:2px solid var(--ac)':'')+'"><span class="badge bok">REF '+esc(k)+'</span><span style="flex:1;display:flex;flex-direction:column;gap:2px;min-width:0"><strong style="font-size:14px">'+esc(p.nome)+'</strong>'+ex+'</span><strong style="font-size:14px">'+fmt(p.preco)+'</strong>'+IC.edit+'</button>';}).join('')+
+  if(p.custo&&p.preco){var l=r2(p.preco*(1-(p.com!=null?p.com:30)/100)-p.custo);ex='<span class="mu" style="font-size:12px">custo '+fmt(p.custo)+' · seu lucro com comissão de '+(p.com!=null?p.com:30)+'%: '+fmt(l)+' ('+pctT(l/p.custo*100)+' sobre o custo)</span>';}
+  return '<button class="card" data-act="pfEdit" data-v="'+esc(k)+'" style="flex-direction:row;align-items:center;gap:12px;padding:12px 14px;'+(ed===k?'border:2px solid var(--ac)':'')+'"><span class="badge bok">REF '+esc(k)+'</span><span style="flex:1;display:flex;flex-direction:column;gap:2px;min-width:0"><strong style="font-size:14px">'+esc(p.nome)+'</strong>'+ex+'</span><span style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;font-size:13px"><strong>'+(p.preco?fmt(p.preco):'—')+'</strong><span style="color:#4338CA;font-weight:600">'+(p.pl?'loj. '+fmt(p.pl):'')+'</span></span>'+IC.edit+'</button>';}).join('')+
  '</main>';
 };
 V.login=function(){var l=S.lg,b=S.bk||{};
@@ -477,24 +486,24 @@ V.caixa=function(){
  return '<header class="hg"><div class="row"><h1>Caixa</h1><div role="tablist" style="display:flex;gap:4px;background:rgba(255,255,255,.14);padding:4px;border-radius:10px">'+
  [['hoje','Hoje'],['mes','Mês']].map(function(p){var on=c.per===p[0];return '<button role="tab" aria-selected="'+on+'" data-act="cxPer" data-v="'+p[0]+'" style="min-height:36px;padding:0 14px;border:0;border-radius:7px;cursor:pointer;font:'+(on?'600 13px Inter,sans-serif;background:#fff;color:var(--ac)':'500 13px Inter,sans-serif;background:transparent;color:#fff')+'">'+p[1]+'</button>';}).join('')+'</div></div>'+
  '<div><div class="sub">Saldo '+(c.per==='mes'?'de '+mesAtual():'de hoje')+'</div><div class="num" style="font-size:34px;font-weight:700">'+fmt(e-s)+'</div></div>'+
- '<div class="g2">'+tabBtn('entradas','Entradas',e,'var(--ac)')+tabBtn('saidas','Saídas',s,'var(--wa)')+'</div></header><main>'+body+
+ '<div class="g2">'+tabBtn('entradas','Entradas',e,'var(--ac)')+tabBtn('saidas','Saídas',s,'var(--wa)')+'</div></header><main>'+(function(){var gc=0,gl2=0;S.cm.vend.filter(inP).filter(function(v){return c.per==='mes'?v.dt.slice(0,7)===HOJE.slice(0,7):v.dt===HOJE;}).forEach(function(v){if(v.lj)gl2+=ganhoV(v);else gc+=ganhoV(v);});return '<button class="card" data-act="go" data-to="comissoes" style="gap:6px;border-color:var(--acb);background:#F4FAF8"><div class="row"><strong style="font-size:15px">Ganho do vendedor '+(c.per==='mes'?'no mês':'hoje')+'</strong><span class="mid" style="color:var(--ac2)">'+fmt(gc+gl2)+'</span></div><div class="row" style="font-size:13px"><span class="mu">Comissão sobre consultoras (20%)</span><span>'+fmt(gc)+'</span></div><div class="row" style="font-size:13px"><span class="mu">Diferença dos lojistas</span><span>'+fmt(gl2)+'</span></div></button>';})()+body+
  '<h2>'+(c.aba==='entradas'?'Entradas':'Saídas')+' '+(c.per==='mes'?'do mês':'de hoje')+'</h2>'+
  (lst.length?lst.map(function(l){return '<div class="card" style="flex-direction:row;align-items:center;gap:12px;padding:12px 14px"><span class="ic" style="background:'+(l.ent?'var(--acl);color:var(--ac)':'var(--wal);color:var(--wa)')+'">'+(l.ent?'+':'−')+'</span><span style="flex:1;display:flex;flex-direction:column;gap:2px;min-width:0"><strong style="font-size:14px">'+esc(l.d)+'</strong><span class="mu" style="font-size:12px">'+br(l.dt)+' · '+l.f+'</span></span><strong style="font-size:14px;color:'+(l.ent?'var(--ac)':'var(--wa)')+'">'+(l.ent?'+ ':'− ')+fmt(l.v)+'</strong></div>';}).join(''):'<p class="mu">Nenhum lançamento.</p>')+
  '</main>'+nav('caixa');
 };
 V.comissoes=function(){
- var m=S.cm,ap=0,pg=0,vl=m.vend.map(function(v,i){return {v:v,i:i};}).filter(function(x){return inP(x.v);});vl.forEach(function(x){var v=x.v;var c=r2(v.base*0.2);if(v.pago)pg+=c;else ap+=c;});
+ var m=S.cm,ap=0,pg=0,vl=m.vend.map(function(v,i){return {v:v,i:i};}).filter(function(x){return inP(x.v);});vl.forEach(function(x){var v=x.v;var c=ganhoV(v);if(v.pago)pg+=c;else ap+=c;});
  var tc=0;
  return '<header class="hw"><div class="hrow"><button class="back" data-act="back" aria-label="Voltar">'+IC.back+'</button><div><h1 style="font-size:20px">Comissões</h1><div class="sub">'+mesAtual().charAt(0).toUpperCase()+mesAtual().slice(1)+' de '+HOJE.slice(0,4)+' · '+(S.praca==='todas'?'todas as praças':'praça '+esc(S.praca))+'</div></div></div>'+
  '<div class="tabs" role="tablist" style="grid-template-columns:1fr 1fr">'+[['vendedor','Vendedor'],['consultoras','Consultoras']].map(function(t){return '<button role="tab" class="tab '+(m.aba===t[0]?'on':'')+'" data-act="cmAba" data-v="'+t[0]+'">'+t[1]+'</button>';}).join('')+'</div></header><main>'+
  (m.aba==='vendedor'?
   '<div class="g2"><div class="card" style="background:var(--wal);border-color:var(--wab);gap:4px"><span style="font-size:12px;color:var(--wa)">A pagar</span><span class="mid" style="color:var(--wa)">'+fmt(ap)+'</span></div><div class="card" style="background:var(--acl);border-color:var(--acb);gap:4px"><span style="font-size:12px;color:var(--ac2)">Pago</span><span class="mid" style="color:var(--ac2)">'+fmt(pg)+'</span></div></div>'+
-  '<p class="mu" style="margin:0">20% sobre o valor pago pela consultora, para o vendedor da praça.</p>'+
-  vl.map(function(x){var v=x.v,i=x.i,c=r2(v.base*0.2);return '<article class="card" style="gap:10px;padding:12px 14px"><div class="row" style="align-items:flex-start"><span style="display:flex;flex-direction:column;gap:2px"><strong style="font-size:15px">'+esc(v.c)+'</strong><span class="mu" style="font-size:12px">'+br(v.dt)+' · pagou '+fmt(v.base)+' · vendedor '+esc(vendDe(v.praca))+'</span></span><strong style="font-size:16px">'+fmt(c)+'</strong></div>'+
+  '<p class="mu" style="margin:0">Consultora: 20% sobre o valor pago. Lojista: diferença entre o preço lojista e o custo das peças vendidas.</p>'+
+  vl.map(function(x){var v=x.v,i=x.i,c=ganhoV(v);return '<article class="card" style="gap:10px;padding:12px 14px"><div class="row" style="align-items:flex-start"><span style="display:flex;flex-direction:column;gap:2px"><strong style="font-size:15px">'+esc(v.c)+'</strong><span class="mu" style="font-size:12px">'+br(v.dt)+' · pagou '+fmt(v.base)+' · vendedor '+esc(vendDe(v.praca))+'</span></span><strong style="font-size:16px">'+fmt(c)+'</strong></div>'+
    (v.pago?'<span class="badge bok" style="align-self:flex-start">Pago</span>':'<button class="btn bs" style="min-height:44px;color:var(--ac);font-size:14px" data-act="cmPagar" data-i="'+i+'">Marcar como pago (lança saída no caixa)</button>')+'</article>';}).join('')
  :
   '<p class="mu" style="margin:0">A consultora retém a comissão no acerto. Faixas: até R$ 500 = 30%, acima de R$ 500 = 35%, acima de R$ 1.000 = 40%.</p>'+
-  m.vendas.filter(inP).map(function(c){var p=faixa(c.t),v=r2(c.t*p/100);tc+=v;return '<article class="card" style="flex-direction:row;justify-content:space-between;align-items:center;padding:12px 14px"><span style="display:flex;flex-direction:column;gap:2px"><strong style="font-size:15px">'+esc(c.c)+'</strong><span class="mu" style="font-size:12px">'+br(c.dt)+' · vendeu '+fmt(c.t)+'</span></span><span style="display:flex;flex-direction:column;align-items:flex-end;gap:2px"><strong style="font-size:16px">'+fmt(v)+'</strong><span style="font-size:12px;font-weight:600;color:var(--ac)">faixa '+p+'%</span></span></article>';}).join('')+
+  m.vendas.filter(inP).filter(function(v){return !v.lj;}).map(function(c){var p=faixa(c.t),v=r2(c.t*p/100);tc+=v;return '<article class="card" style="flex-direction:row;justify-content:space-between;align-items:center;padding:12px 14px"><span style="display:flex;flex-direction:column;gap:2px"><strong style="font-size:15px">'+esc(c.c)+'</strong><span class="mu" style="font-size:12px">'+br(c.dt)+' · vendeu '+fmt(c.t)+'</span></span><span style="display:flex;flex-direction:column;align-items:flex-end;gap:2px"><strong style="font-size:16px">'+fmt(v)+'</strong><span style="font-size:12px;font-weight:600;color:var(--ac)">faixa '+p+'%</span></span></article>';}).join('')+
   '<div class="row" style="padding:4px 2px"><span>Total de comissões das consultoras</span><strong>'+fmt(tc)+'</strong></div>')+
  '</main>';
 };
@@ -542,19 +551,23 @@ var A={
  pgForma:function(d){keep();S.pag.forma=d.v;render();},
  pgOk:function(){var c=getC(S.sel),v=c.saldo;
   S.cx.lista.unshift({praca:c.praca,dt:HOJE,ent:true,d:'Quitação de saldo · '+c.nome,cat:'Quitação de saldo',f:S.pag.forma,v:v});
-  S.cm.vend.unshift({praca:c.praca,c:c.nome+' (quitação)',dt:HOJE,base:v,pago:false});
+  S.cm.vend.unshift(lj(c)?{praca:c.praca,c:c.nome+' (lojista, quitação)',dt:HOJE,base:v,ganho:r2(v*(c.ljRatio||0)),lj:true,pago:false}:{praca:c.praca,c:c.nome+' (quitação)',dt:HOJE,base:v,pago:false});
   c.hist.unshift(['Pagamento de saldo · '+S.pag.forma,brY(HOJE),fmt(v)]);c.saldo=0;S.pag.aberto=false;render();},
- acerto:function(d){var c=getC(d.id);S.ac={id:d.id,forma:'Pix',pagoTexto:null,res:null,pend:false,motivo:'',novaData:null,erro:'',itens:c.entrega.itens.map(function(x){return {ref:x.ref,entregue:x.entregue,vendida:0,devolvida:0,preco:prI(x)};})};go('acerto');},
+ acerto:function(d){var c=getC(d.id);S.ac={id:d.id,forma:'Pix',pagoTexto:null,res:null,pend:false,motivo:'',novaData:null,erro:'',itens:c.entrega.itens.map(function(x){return {ref:x.ref,entregue:x.entregue,vendida:x.entregue,devolvida:0,preco:prI(x),custo:custoI(x)};})};go('acerto');},
+ acDev:function(d){keep();var x=S.ac.itens[+d.i],n=x.devolvida+(+d.d);if(n<0||n>x.entregue)return;x.devolvida=n;x.vendida=x.entregue-n;S.ac.pagoTexto=null;render();},
+ acDevTudo:function(d){keep();var x=S.ac.itens[+d.i];x.devolvida=x.devolvida===x.entregue?0:x.entregue;x.vendida=x.entregue-x.devolvida;S.ac.pagoTexto=null;render();},
+ acDevAll:function(){keep();S.ac.itens.forEach(function(x){x.devolvida=x.entregue;x.vendida=0;});S.ac.pagoTexto=null;render();},
+ acDevZero:function(){keep();S.ac.itens.forEach(function(x){x.devolvida=0;x.vendida=x.entregue;});S.ac.pagoTexto=null;render();},
  acQ:function(d){keep();var x=S.ac.itens[+d.i],c=d.c,n=x[c]+(+d.d),o=c==='vendida'?x.devolvida:x.vendida;if(n<0||n+o>x.entregue)return;x[c]=n;S.ac.pagoTexto=null;render();},
  acForma:function(d){keep();S.ac.forma=d.v;render();},
  acOk:function(){var a=S.ac,c=getC(a.id),k=calc();
   if(k.pg>0)S.cx.lista.unshift({praca:c.praca,dt:HOJE,ent:true,d:'Acerto · '+c.nome,cat:'Acerto',f:a.forma,v:k.pg});
-  if(k.pg>0)S.cm.vend.unshift({praca:c.praca,c:c.nome,dt:HOJE,base:k.pg,pago:false});
-  S.cm.vendas.unshift({praca:c.praca,c:c.nome,dt:HOJE,t:k.t});
-  var fica={};a.itens.forEach(function(x){var f=x.entregue-x.vendida-x.devolvida,k=x.ref+'|'+prI(x);if(f>0)fica[k]=(fica[k]||0)+f;});
-  c.emMaos=Object.keys(fica).map(function(k){var p=k.split('|');return {ref:p[0],preco:+p[1],qtd:fica[k]};});
-  c.saldo=r2(c.saldo+k.saldo);c.ultFaixa=k.p;c.entrega=null;c.pendente=null;
-  c.hist.unshift(['Acerto · vendeu '+fmt(k.t)+' ('+k.p+'%)',brY(HOJE),'Pagou '+fmt(k.pg)+(k.saldo>0?' · deve '+fmt(k.saldo):'')]);
+  if(k.pg>0)S.cm.vend.unshift(k.lj?{praca:c.praca,c:c.nome+' (lojista)',dt:HOJE,base:k.pg,ganho:k.cv,lj:true,pago:false}:{praca:c.praca,c:c.nome,dt:HOJE,base:k.pg,pago:false});
+  if(k.lj)c.ljRatio=k.ratio;
+  S.cm.vendas.unshift({praca:c.praca,c:c.nome,dt:HOJE,t:k.t,lj:k.lj});
+  c.emMaos=[];
+  c.saldo=r2(c.saldo+k.saldo);if(!k.lj)c.ultFaixa=k.p;c.entrega=null;c.pendente=null;
+  c.hist.unshift(['Acerto · vendeu '+fmt(k.t)+(k.lj?' (lojista)':' ('+k.p+'%)'),brY(HOJE),'Pagou '+fmt(k.pg)+(k.saldo>0?' · deve '+fmt(k.saldo):'')]);
   a.res=k;S.hist=['inicio'];render();},
  acPend:function(){keep();var a=S.ac,c=getC(a.id);a.pend=!a.pend;a.motivo='';a.erro='';a.novaData=sugere(addD(c.entrega.prevista,60));render();},
  acMotivo:function(d){keep();S.ac.motivo=d.v;S.ac.erro='';render();},
@@ -626,17 +639,18 @@ var A={
   S.vf=null;S.vmsg='Vendedor '+f.nome.trim()+' cadastrado na praça '+pr+'. Login: '+lg;render();},
  neFor:function(d){startNE(d.id);go('novaentrega');},
  neNova:function(){startNE(S.ne.cons);render();},
- neAdd:function(){keep();var n=S.ne,cod=String(n.ref).replace(/\D/g,''),p=S.prod[cod];
+ neAdd:function(){keep();var n=S.ne,cod=String(n.ref).replace(/\D/g,''),p=S.prod[cod],LJ=lj(getC(n.cons));
   if(!p){n.msg='Referência não encontrada. Cadastre a peça em Produtos.';render();return;}
-  var f=n.itens.filter(function(x){return x.ref===cod&&!x.prev;})[0];if(f)f.qtd++;else n.itens.push({ref:cod,qtd:1,preco:p.preco});
+  var prc=LJ?p.pl:p.preco;if(!prc){n.msg=LJ?'Essa peça não tem preço lojista. Cadastre o preço lojista em Produtos.':'Essa peça não tem preço de etiqueta. Cadastre em Produtos.';render();return;}
+  var f=n.itens.filter(function(x){return x.ref===cod&&!x.prev;})[0];if(f)f.qtd++;else n.itens.push({ref:cod,qtd:1,preco:prc});
   n.ref='';n.msg=p.nome+' adicionada.';render();},
  neQ:function(d){keep();var x=S.ne.itens[+d.i];x.qtd+=(+d.d);if(x.qtd<=0)S.ne.itens.splice(+d.i,1);render();},
  neGerar:function(){var n=S.ne,c=getC(n.cons),q=0,v=0,agg={};
   n.itens.forEach(function(x){var pr=prI(x),k=x.ref+'|'+pr;q+=x.qtd;v+=x.qtd*pr;agg[k]=(agg[k]||0)+x.qtd;});if(!q)return;
-  c.entrega={data:n.dataEnt,prevista:n.data,itens:Object.keys(agg).map(function(k){var p=k.split('|');return {ref:p[0],preco:+p[1],entregue:agg[k],vendida:0,devolvida:0};})};c.emMaos=[];c.pendente=null;
+  c.entrega={data:n.dataEnt,prevista:n.data,itens:Object.keys(agg).map(function(k){var p=k.split('|');return {ref:p[0],preco:+p[1],custo:S.prod[p[0]]&&S.prod[p[0]].custo!=null?S.prod[p[0]].custo:null,entregue:agg[k],vendida:0,devolvida:0};})};c.emMaos=[];c.pendente=null;
   c.hist.unshift(['Entrega · '+q+' peças',brY(n.dataEnt),fmt(v)+' em etiqueta']);
   n.ok={nome:c.nome,q:q,v:v,prev:c.entrega.prevista};render();},
- nvOpen:function(){var pr=pracaAtual();S.novo={cep:'',lat:null,lng:null,gps:false,geo:null,nome:'',nasc:'',cpf:'',tel:'',rua:'',bairro:'',ref:'',erro:'',praca:pr,cidade:PR(pr).cidades[0].nome};go('novacons');},
+ nvOpen:function(){var pr=pracaAtual();S.novo={tipo:'consultora',loja:'',cep:'',lat:null,lng:null,gps:false,geo:null,nome:'',nasc:'',cpf:'',tel:'',rua:'',bairro:'',ref:'',erro:'',praca:pr,cidade:PR(pr).cidades[0].nome};go('novacons');},
  cepBuscar:function(){var f=S.novo,cep=String(f.cep||'').replace(/\D/g,'');
   if(cep.length!==8){f.geo={msg:'Digite os 8 números do CEP.',erro:true};render();return;}
   keep();f.geo={busy:'cep'};render();
@@ -669,12 +683,16 @@ var A={
     render();
    }).catch(function(){f.geo={msg:'Localização do GPS salva'+(prec?' (precisão de '+prec+' m)':'')+', mas não consegui achar o endereço. Digite a rua e o bairro.'};render();});
   },function(err){f.geo={msg:err&&err.code===1?'Permissão de localização negada. Libere o acesso à localização para este navegador nas configurações do celular.':'Não foi possível obter a localização. Verifique se o GPS está ligado.',erro:true};render();},{enableHighAccuracy:true,timeout:15000,maximumAge:0});},
- edOpen:function(d){var c=getC(d.id);S.novo={edit:c.id,cep:c.cep||'',lat:null,lng:null,gps:false,geo:null,nome:c.nome,nasc:c.nasc||'',cpf:c.cpf||'',tel:c.tel||'',rua:c.rua,bairro:c.bairro,ref:c.ref||'',erro:'',praca:c.praca,cidade:c.cidade};go('novacons');},
+ edOpen:function(d){var c=getC(d.id);S.novo={tipo:c.tipo||'consultora',loja:c.loja||'',edit:c.id,cep:c.cep||'',lat:null,lng:null,gps:false,geo:null,nome:c.nome,nasc:c.nasc||'',cpf:c.cpf||'',tel:c.tel||'',rua:c.rua,bairro:c.bairro,ref:c.ref||'',erro:'',praca:c.praca,cidade:c.cidade};go('novacons');},
+ nvTipo:function(d){keep();S.novo.tipo=d.v;S.novo.erro='';render();},
  nvCid:function(d){keep();S.novo.cidade=d.v;render();},
  nvSave:function(){var f=S.novo,cpf=f.cpf.replace(/\D/g,''),tel=f.tel.replace(/\D/g,''),e='';
-  if(f.nome.trim().split(/\s+/).length<2)e='Informe o nome completo.';
-  else if(!f.nasc&&!f.edit)e='Informe a data de nascimento.';
-  else if((cpf||!f.edit)&&cpf.length!==11)e='O CPF precisa ter 11 números.';
+  var LJ=f.tipo==='lojista';
+  if(LJ&&!String(f.loja||'').trim())e='Informe o nome da loja.';
+  else if(f.nome.trim().split(/\s+/).length<2)e=LJ?'Informe o nome completo do responsável.':'Informe o nome completo.';
+  else if(!LJ&&!f.nasc&&!f.edit)e='Informe a data de nascimento.';
+  else if(LJ&&cpf&&cpf.length!==11&&cpf.length!==14)e='O CPF precisa ter 11 números ou o CNPJ 14.';
+  else if(!LJ&&(cpf||!f.edit)&&cpf.length!==11)e='O CPF precisa ter 11 números.';
   else if(tel.length<10)e='Informe o telefone com DDD.';
   else if(!f.rua.trim()||!f.bairro.trim())e='Informe a rua e o bairro.';
   if(e){f.erro=e;render();return;}
@@ -684,10 +702,10 @@ var A={
    if(c.nome!==f.nome.trim())mud.push('nome');
    if(f.lat!=null){c.lat=f.lat;c.lng=f.lng;c.gps=f.gps;if(mud.indexOf('endereço')<0)mud.push('localização');}
    else if(mud.indexOf('endereço')>=0){c.gps=false;var g=GEO[f.cidade]||GEO[PR(c.praca).cidades[0].nome];if(c.cidade!==f.cidade||c.lat==null){c.lat=g?g[0]+(Math.random()-0.5)*0.02:null;c.lng=g?g[1]+(Math.random()-0.5)*0.02:null;}}
-   c.cep=f.cep;c.nome=f.nome.trim();c.nasc=f.nasc;c.cpf=f.cpf;c.tel=f.tel;c.rua=f.rua.trim();c.bairro=f.bairro.trim();c.cidade=f.cidade;c.ref=f.ref.trim();
+   c.tipo=f.tipo||'consultora';c.loja=String(f.loja||'').trim();c.cep=f.cep;c.nome=f.nome.trim();c.nasc=f.nasc;c.cpf=f.cpf;c.tel=f.tel;c.rua=f.rua.trim();c.bairro=f.bairro.trim();c.cidade=f.cidade;c.ref=f.ref.trim();
    if(mud.length)c.hist.unshift(['Cadastro atualizado ('+mud.join(', ')+')',brY(HOJE),mud.indexOf('endereço')>=0?c.rua+' – '+c.bairro+', '+c.cidade:'']);
    S.novo=null;S.toast='Cadastro de '+c.nome+' atualizado.';A.back();return;}
-  var id='c'+Date.now(),pr=S.praca==='todas'?f.praca:S.praca,g=GEO[f.cidade]||GEO[PR(pr).cidades[0].nome];S.cons.push({id:id,praca:pr,cidade:f.cidade,cep:f.cep,gps:!!f.gps,lat:f.lat!=null?f.lat:(g?g[0]+(Math.random()-0.5)*0.02:null),lng:f.lng!=null?f.lng:(g?g[1]+(Math.random()-0.5)*0.02:null),pendente:null,nome:f.nome.trim(),bairro:f.bairro.trim(),rua:f.rua.trim(),ref:f.ref.trim(),tel:f.tel,cpf:f.cpf,nasc:f.nasc,saldo:0,ultFaixa:30,entrega:null,emMaos:[],hist:[['Cadastro',brY(HOJE),'']]});
+  var id='c'+Date.now(),pr=S.praca==='todas'?f.praca:S.praca,g=GEO[f.cidade]||GEO[PR(pr).cidades[0].nome];S.cons.push({tipo:f.tipo||'consultora',loja:String(f.loja||'').trim(),id:id,praca:pr,cidade:f.cidade,cep:f.cep,gps:!!f.gps,lat:f.lat!=null?f.lat:(g?g[0]+(Math.random()-0.5)*0.02:null),lng:f.lng!=null?f.lng:(g?g[1]+(Math.random()-0.5)*0.02:null),pendente:null,nome:f.nome.trim(),bairro:f.bairro.trim(),rua:f.rua.trim(),ref:f.ref.trim(),tel:f.tel,cpf:f.cpf,nasc:f.nasc,saldo:0,ultFaixa:30,entrega:null,emMaos:[],hist:[['Cadastro',brY(HOJE),'']]});
   var prev=S.hist[S.hist.length-1];S.novo=null;
   if(prev==='novaentrega'){startNE(id);}
   A.back();},
@@ -695,7 +713,8 @@ var A={
  pfCom:function(d){keep();S.pf.com=String(d.v);render();},
  pfUsar:function(d){keep();S.pf.valor=(+d.v).toFixed(2).replace('.',',');S.pf.erro=false;S.pf.msg='Preço aplicado. Confira e toque em Salvar produto.';render();},
  pfEdit:function(d){var p=S.prod[d.v];if(!p)return;var c2=function(n){return n!=null?(+n).toFixed(2).replace('.',','):'';};
-  S.pf={ref:d.v,nome:p.nome,custo:c2(p.custo),valor:c2(p.preco),msg:'',erro:false,mar:'50',com:String(p.com!=null?p.com:30),edit:d.v,delOk:false};S._scroll=0;render();},
+  S.pf={pl:c2(p.pl),ref:d.v,nome:p.nome,custo:c2(p.custo),valor:c2(p.preco),msg:'',erro:false,mar:'50',com:String(p.com!=null?p.com:30),edit:d.v,delOk:false};S._scroll=0;render();},
+ pfUsarL:function(d){keep();S.pf.pl=(+d.v).toFixed(2).replace('.',',');S.pf.erro=false;S.pf.msg='Preço lojista aplicado. Confira e salve.';render();},
  pfCancel:function(){S.pf=pfVazio();render();},
  pfDel:function(){var f=S.pf,k=f.edit,uso=usoProd(k);
   if(uso.length){keep();f.erro=true;f.msg='Não dá para excluir: essa peça está com '+uso.join(', ')+'. Faça o acerto antes.';f.delOk=false;render();return;}
@@ -705,16 +724,16 @@ var A={
  pfSave:function(){var f=S.pf,r=f.ref.replace(/\D/g,''),v=num(f.valor);
   if(f.edit){var k=f.edit,old=S.prod[k];
    if(!f.nome.trim()){f.erro=true;f.msg='Informe o nome da peça.';render();return;}
-   if(v<=0){f.erro=true;f.msg='Informe o valor da etiqueta.';render();return;}
+   if(v<=0&&!(numP(f.pl)>0)){f.erro=true;f.msg='Informe o valor da etiqueta ou o preço lojista.';render();return;}
    var mudouPreco=old&&r2(old.preco)!==r2(v),uso=usoProd(k);
    if(mudouPreco)S.cons.forEach(function(c){(c.entrega?c.entrega.itens:[]).concat(c.emMaos).forEach(function(x){if(x.ref===k&&x.preco==null)x.preco=old.preco;});});
-   S.prod[k]={nome:f.nome.trim(),preco:v,custo:numP(f.custo)||null,com:numP(f.com)};
+   S.prod[k]={nome:f.nome.trim(),preco:v>0?v:null,pl:numP(f.pl)||null,custo:numP(f.custo)||null,com:numP(f.com)};
    S.pf=pfVazio();S.pf.msg='REF '+k+' atualizada'+(mudouPreco?': novo preço '+fmt(v)+'.'+(uso.length?' As peças que já estão com as consultoras continuam com o preço antigo ('+fmt(old.preco)+').':''):'.');render();return;}
   if(!r){f.erro=true;f.msg='Informe a referência.';}
   else if(S.prod[r]){f.erro=true;f.msg='A referência '+r+' já está cadastrada ('+S.prod[r].nome+').';}
   else if(!f.nome.trim()){f.erro=true;f.msg='Informe o nome da peça.';}
-  else if(v<=0){f.erro=true;f.msg='Informe o valor da etiqueta.';}
-  else{S.prod[r]={nome:f.nome.trim(),preco:v,custo:numP(f.custo)||null,com:numP(f.com)};f.erro=false;f.msg='REF '+r+' – '+f.nome.trim()+' cadastrada por '+fmt(v)+'.';f.ref='';f.nome='';f.valor='';f.custo='';}
+  else if(v<=0&&!(numP(f.pl)>0)){f.erro=true;f.msg='Informe o valor da etiqueta ou o preço lojista.';}
+  else{S.prod[r]={nome:f.nome.trim(),preco:v>0?v:null,pl:numP(f.pl)||null,custo:numP(f.custo)||null,com:numP(f.com)};f.erro=false;f.msg='REF '+r+' – '+f.nome.trim()+' cadastrada.';f.ref='';f.nome='';f.valor='';f.custo='';f.pl='';}
   render();},
  cxPer:function(d){S.cx.per=d.v;render();},
  cxAba:function(d){S.cx.aba=d.v;S.cx.form=false;render();},
@@ -727,7 +746,7 @@ var A={
   if(c.cat==='Outros'&&!c.desc.trim()){keep();c.erro='Descreva a despesa em Observação.';render();return;}
   c.lista.unshift({praca:S.praca==='todas'?c.praca:S.praca,dt:HOJE,ent:false,d:c.cat+(c.desc.trim()?' · '+c.desc.trim():''),cat:c.cat,f:'Pix',v:v});c.form=false;c.valor='';c.desc='';c.erro='';render();},
  cmAba:function(d){S.cm.aba=d.v;render();},
- cmPagar:function(d){keep();var v=S.cm.vend[+d.i];v.pago=true;S.cx.lista.unshift({praca:v.praca,dt:HOJE,ent:false,d:'Comissão paga · '+v.c,cat:'Comissão paga',f:'Pix',v:r2(v.base*0.2)});render();}
+ cmPagar:function(d){keep();var v=S.cm.vend[+d.i];v.pago=true;S.cx.lista.unshift({praca:v.praca,dt:HOJE,ent:false,d:'Comissão paga · '+v.c,cat:'Comissão paga',f:'Pix',v:ganhoV(v)});render();}
 };
 var IN={
  acPago:function(el){S.ac.pagoTexto=el.value;var k=calc(),s=document.getElementById('acSaldo');s.textContent=fmt(k.saldo);s.style.color=k.saldo>0?'var(--wa)':'var(--ac)';document.getElementById('acCv').textContent=fmt(k.cv);},
@@ -747,6 +766,7 @@ var IN={
  pfF:function(el){S.pf[el.getAttribute('data-f')]=el.value;},
  nvF:function(el){var k=el.getAttribute('data-f'),v=el.value,d;
   if(k==='cep'){v=cepFmt(v);el.value=v;S.novo.cep=v;if(v.length===9&&!(S.novo.geo&&S.novo.geo.busy))A.cepBuscar();return;}
+  if(k==='cpf'&&S.novo.tipo==='lojista'){d=v.replace(/\D/g,'').slice(0,14);v=d.length>11?d.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{0,2}).*/,'$1.$2.$3/$4-$5'):d;el.value=v;S.novo.cpf=v;return;}
   if(k==='cpf'){d=v.replace(/\D/g,'').slice(0,11);v=d.replace(/^(\d{3})(\d)/,'$1.$2').replace(/^(\d{3})\.(\d{3})(\d)/,'$1.$2.$3').replace(/\.(\d{3})(\d{1,2})$/,'.$1-$2');el.value=v;}
   if(k==='tel'){d=v.replace(/\D/g,'').slice(0,11);v=d.length>10?d.replace(/^(\d{2})(\d)(\d{4})(\d{0,4})/,'($1) $2 $3-$4'):d.replace(/^(\d{2})(\d{0,4})(\d{0,4})/,function(m,a,b,c){return '('+a+') '+b+(c?'-'+c:'');});el.value=v;}
   S.novo[k]=v;}
