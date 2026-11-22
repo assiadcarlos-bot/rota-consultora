@@ -138,7 +138,11 @@ function txtConvite(c){return 'Olá, '+pnome(c.nome)+'! Tudo bem? Aqui é o '+pn
 function lj(c){return !!c&&c.tipo==='lojista';}
 function tagLj(c){return lj(c)?' <span class="badge blj">Lojista'+(c.loja?' · '+esc(c.loja):'')+'</span>':'';}
 function r90(x){x=r2(x);var sg=Math.ceil(x)-0.10;if(sg<x)sg=Math.ceil(x)+0.90;return r2(sg);}
-function pfVazio(){return {pl:'',ref:'',nome:'',custo:'',valor:'',msg:'',erro:false,mar:'50',com:'30',edit:null,delOk:false};}
+function intN(t){var d=String(t==null?'':t).replace(/\D/g,'');return d===''?null:parseInt(d,10);}
+function estQ(r){var p=S.prod[r];return p&&p.est!=null?p.est:null;}
+function mov(r,tipo,q,obs){var p=S.prod[r];if(!p||p.est==null)return;(S.movs=S.movs||[]).unshift({dt:HOJE,ref:r,tipo:tipo,q:q,saldo:p.est,obs:obs||''});if(S.movs.length>400)S.movs.length=400;}
+function noRasc(r){var n=0;(S.ne&&S.ne.itens||[]).forEach(function(x){if(x.ref===r&&!x.prev)n+=x.qtd;});return n;}
+function pfVazio(){return {est:'',pl:'',ref:'',nome:'',custo:'',valor:'',msg:'',erro:false,mar:'50',com:'30',edit:null,delOk:false};}
 function mk(a){return a.map(function(x){return {ref:x[0],entregue:x[1],vendida:0,devolvida:0};});}
 function ent(data,itens,prev){return {data:data,prevista:prev||addD(data,60),itens:mk(itens)};}
 function seg(s){return D(s).getUTCDay()===1;}
@@ -152,11 +156,11 @@ var S={
  user:null,praca:'todas',lg:{u:'',s:'',erro:''},
  pracas:[
 ],
- np:null,av:null,log:[],semanas:[],fs:null,inf:null,rs:{sel:{},filtro:'hoje',ver:false},
+ np:null,av:null,movs:[],es:null,log:[],semanas:[],fs:null,inf:null,rs:{sel:{},filtro:'hoje',ver:false},
  vendedores:[],setup:{nome:'',login:'',senha:'',senha2:'',praca:'',erro:''},
  vf:null,
  prod:{},
- pf:{pl:'',ref:'',nome:'',custo:'',valor:'',msg:'',erro:false,mar:'50',com:'30',edit:null,delOk:false},
+ pf:{est:'',pl:'',ref:'',nome:'',custo:'',valor:'',msg:'',erro:false,mar:'50',com:'30',edit:null,delOk:false},
  cons:[
  ],
  pag:{aberto:false,forma:'Pix'},
@@ -236,7 +240,7 @@ V.inicio=function(){
  (ct.length?'<h2>Contatos para hoje</h2><p class="mu" style="margin:0">Consultoras inativas para convidar a voltar.</p>'+ct.map(function(c){return '<div class="card" style="gap:10px"><div class="row"><button data-act="ficha" data-id="'+c.id+'" style="border:0;background:none;padding:0;text-align:left;font:inherit;color:inherit;cursor:pointer;display:flex;flex-direction:column;gap:2px"><strong>'+esc(c.nome)+'</strong><span class="mu">'+esc(c.bairro)+' · inativa desde '+br(c.inativa.desde)+'</span></button></div><div class="g2" style="gap:8px"><a class="btn bp" style="background:#1F8F55;min-height:44px;font-size:14px" target="_blank" rel="noopener" href="'+wa(c.tel)+'?text='+encodeURIComponent(txtConvite(c))+'">'+IC.chat+'Convidar</a><button class="btn bs" style="min-height:44px;font-size:14px" data-act="inAdiar" data-id="'+c.id+'">Adiar 30 dias</button></div></div>';}).join(''):'')+
  (bl.length?'<div class="row"><h2>Cobrança</h2><button class="btn" style="min-height:44px;background:none;color:var(--ac);padding:0" data-act="go" data-to="cobranca">Ver todas</button></div>'+bl.slice(0,3).map(function(c){return rowC(c,c.bairro+' · sem pedido até quitar');}).join(''):'')+
  '<h2>Atalhos</h2><div class="g3">'+
-  [['novaentrega','Nova entrega',IC.box],['comissoes','Comissões',IC.pct],['produtos','Produtos',IC.tag]].concat(u.admin?[['vendedores','Vendedores',IC.users.replace('currentColor','#0F6E5C')],['backup','Backup',IC.save]]:[])
+  [['novaentrega','Nova entrega',IC.box],['estoque','Estoque',IC.box],['comissoes','Comissões',IC.pct],['produtos','Produtos',IC.tag]].concat(u.admin?[['vendedores','Vendedores',IC.users.replace('currentColor','#0F6E5C')],['backup','Backup',IC.save]]:[])
   .map(function(a){return '<button class="short" data-act="go" data-to="'+a[0]+'">'+a[2]+a[1]+'</button>';}).join('')+
  '</div></main>'+nav('inicio');
 };
@@ -397,7 +401,7 @@ V.novaentrega=function(){
   var q=0,v=0,prev=0;n.itens.forEach(function(x){q+=x.qtd;v+=x.qtd*prI(x);if(x.prev)prev+=x.qtd;});
   body=(c.saldo>0?'<div class="warn" style="padding:10px 14px;font-size:13px;border-radius:12px">Pedido liberado com saldo em aberto: os '+fmt(c.saldo)+' serão cobrados no próximo acerto.</div>':'')+'<div class="ok" style="padding:10px 14px;font-size:13px;border-radius:12px">'+esc(c.nome)+(lj(c)?' (lojista) está liberado. As peças entram pelo <strong>preço lojista</strong>.':' está liberada.')+(prev?' '+prev+' peça(s) do ciclo anterior já foram incluídas.':'')+'</div>'+
   '<div class="fld"><label for="ref">Referência da peça</label><div style="display:flex;gap:8px"><input id="ref" inputmode="numeric" placeholder="Ex.: 1023" value="'+esc(n.ref)+'" data-in="neRef" style="flex:1;min-width:0"><button class="btn bp" data-act="neAdd">Adicionar</button></div><span class="mu" style="font-size:12px">'+esc(n.msg||'Digite o código da etiqueta. O preço vem do cadastro do produto.')+'</span></div>'+
-  n.itens.map(function(x,i){var p={nome:nomeP(x.ref),preco:prI(x)};return '<article class="card" style="flex-direction:row;align-items:center;gap:10px;padding:12px 14px"><span style="flex:1;display:flex;flex-direction:column;gap:2px;min-width:0"><strong style="font-size:15px">'+esc(p.nome)+'</strong><span class="mu" style="font-size:12px">REF '+x.ref+' · '+fmt(p.preco)+(x.prev?' · ciclo anterior':'')+'</span></span><button class="sb" style="border:1px solid var(--bd2);background:#fff" data-act="neQ" data-i="'+i+'" data-d="-1" aria-label="Diminuir">−</button><strong style="min-width:22px;text-align:center">'+x.qtd+'</strong><button class="sb" style="background:var(--ac);color:#fff" data-act="neQ" data-i="'+i+'" data-d="1" aria-label="Aumentar">+</button></article>';}).join('')+
+  n.itens.map(function(x,i){var p={nome:nomeP(x.ref),preco:prI(x)};return '<article class="card" style="flex-direction:row;align-items:center;gap:10px;padding:12px 14px"><span style="flex:1;display:flex;flex-direction:column;gap:2px;min-width:0"><strong style="font-size:15px">'+esc(p.nome)+'</strong><span class="mu" style="font-size:12px">REF '+x.ref+' · '+fmt(p.preco)+(x.prev?' · ciclo anterior':'')+(estQ(x.ref)!=null&&!x.prev?' · estoque: '+(estQ(x.ref)-noRasc(x.ref))+' restante':'')+'</span></span><button class="sb" style="border:1px solid var(--bd2);background:#fff" data-act="neQ" data-i="'+i+'" data-d="-1" aria-label="Diminuir">−</button><strong style="min-width:22px;text-align:center">'+x.qtd+'</strong><button class="sb" style="background:var(--ac);color:#fff" data-act="neQ" data-i="'+i+'" data-d="1" aria-label="Aumentar">+</button></article>';}).join('')+
   '<section class="card" style="padding:16px"><div class="row"><span>Total de peças</span><strong>'+q+'</strong></div><div class="row"><span>'+(lj(c)?'Valor de repasse':'Valor em etiqueta')+'</span><strong>'+fmt(v)+'</strong></div>'+
   '<div class="fld"><label for="ne-dt">Data da entrega</label><input id="ne-dt" type="date" max="'+HOJE+'" value="'+n.dataEnt+'" data-in="neDt"><span class="mu" style="font-size:12px">Para consultoras que já estão com mercadoria, coloque a data em que você entregou.</span></div>'+(function(){var cy=cicloDe(n.dataEnt),sel=n.data||cy.ini,ops=[addD(cy.ini,-7),cy.ini,addD(cy.ini,7)];
    return '<div style="background:#F4FAF8;border:1px solid var(--acb);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px"><span style="font-size:13px;font-weight:600">Próximo acerto (vai no romaneio)</span>'+
@@ -435,17 +439,18 @@ V.produtos=function(){
    calc+='<section style="background:#EEF0FF;border:1px solid #C7CBF5;border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:6px"><span class="badge blj" style="align-self:flex-start">Lojista</span><div class="row"><span style="font-size:14px">Preço lojista sugerido</span><strong class="num" style="font-size:24px;color:#3730A3">'+fmt(plS)+'</strong></div><span class="mu" style="font-size:12px">O lojista te paga '+fmt(plS)+' por peça vendida e vende na loja pelo preço que quiser. Seu lucro: '+fmt(plL)+' ('+pctT(plL/cu*100)+' sobre o custo), sem comissão.</span><button class="btn" style="background:#4338CA;color:#fff" data-act="pfUsarL" data-v="'+plS+'">Usar '+fmt(plS)+' como preço lojista</button></section>';}
   calc+='</section>';}
  var ed=f.edit,uso=ed?usoProd(ed):[];
- return hdrW('Produtos',ks.length+' peças cadastradas')+'<main><section class="card" style="padding:16px;gap:12px;'+(ed?'border:2px solid var(--ac)':'')+'"><h2>'+(ed?'Editar produto':'Cadastrar produto')+'</h2>'+
+ return hdrW('Produtos',ks.length+' peças cadastradas')+'<main><button class="btn bl" data-act="go" data-to="estoque">'+IC.box.replace('#0F6E5C','currentColor')+'Ver estoque</button><section class="card" style="padding:16px;gap:12px;'+(ed?'border:2px solid var(--ac)':'')+'"><h2>'+(ed?'Editar produto':'Cadastrar produto')+'</h2>'+
  (ed?'<div class="fld"><span style="font-size:13px;font-weight:600">Referência</span><span class="badge bok" style="align-self:flex-start;font-size:14px">REF '+esc(ed)+'</span><span class="mu" style="font-size:12px">A referência não pode ser alterada.'+(uso.length?' Peças com consultoras agora: '+esc(uso.join(', '))+'.':'')+'</span></div>':'<div class="fld"><label for="pf-ref">Referência</label><input id="pf-ref" inputmode="numeric" placeholder="Ex.: 6010" value="'+esc(f.ref)+'" data-in="pfF" data-f="ref"></div>')+
  '<div class="fld"><label for="pf-nome">Nome da peça</label><input id="pf-nome" placeholder="Ex.: Saia plissada" value="'+esc(f.nome)+'" data-in="pfF" data-f="nome"></div>'+
  '<div class="fld"><label for="pf-custo">Quanto você pagou na peça (R$)</label><div style="display:flex;gap:8px"><input id="pf-custo" inputmode="decimal" placeholder="Ex.: 29,90" value="'+esc(f.custo)+'" data-in="pfF" data-f="custo" style="flex:1;min-width:0"><button class="btn bl" data-act="pfCalc">Calcular preço</button></div></div>'+
  calc+
  '<div class="g2"><div class="fld"><label for="pf-valor">Etiqueta · consultora (R$)</label><input id="pf-valor" inputmode="decimal" placeholder="0,00" value="'+esc(f.valor)+'" data-in="pfF" data-f="valor"></div><div class="fld"><label for="pf-pl">Preço lojista (R$)</label><input id="pf-pl" inputmode="decimal" placeholder="0,00" value="'+esc(f.pl)+'" data-in="pfF" data-f="pl"></div></div>'+
+ '<div class="fld"><label for="pf-est">'+(ed?'Quantidade em estoque (pode corrigir)':'Quantidade em estoque')+'</label><input id="pf-est" inputmode="numeric" placeholder="Ex.: 100" value="'+esc(f.est)+'" data-in="pfF" data-f="est"><span class="mu" style="font-size:12px">Peças que estão com você agora. Pedido novo tira do estoque, peça devolvida no acerto volta.'+(ed&&uso.length?' Com consultoras agora: '+esc(uso.join(', '))+'.':'')+'</span></div>'+
  (f.msg?'<div class="'+(f.erro?'warn':'ok')+'" style="padding:12px;border-radius:12px">'+esc(f.msg)+'</div>':'')+
  (ed?'<div class="g2"><button class="btn bs" data-act="pfCancel">Cancelar</button><button class="btn bp" data-act="pfSave">Salvar alterações</button></div><button class="btn bw" data-act="pfDel">'+(f.delOk?'Toque de novo para excluir':'Excluir produto')+'</button>':'<button class="btn bp" data-act="pfSave">Salvar produto</button>')+'</section>'+
  '<h2>Peças cadastradas</h2>'+(ks.length?'<p class="mu" style="margin:0;font-size:12px">Toque numa peça para editar ou excluir.</p>':'<p class="mu">Nenhuma peça cadastrada ainda.</p>')+ks.map(function(k){var p=S.prod[k],ex='';
   if(p.custo&&p.preco){var l=r2(p.preco*(1-(p.com!=null?p.com:30)/100)-p.custo);ex='<span class="mu" style="font-size:12px">custo '+fmt(p.custo)+' · seu lucro com comissão de '+(p.com!=null?p.com:30)+'%: '+fmt(l)+' ('+pctT(l/p.custo*100)+' sobre o custo)</span>';}
-  return '<button class="card" data-act="pfEdit" data-v="'+esc(k)+'" style="flex-direction:row;align-items:center;gap:12px;padding:12px 14px;'+(ed===k?'border:2px solid var(--ac)':'')+'"><span class="badge bok">REF '+esc(k)+'</span><span style="flex:1;display:flex;flex-direction:column;gap:2px;min-width:0"><strong style="font-size:14px">'+esc(p.nome)+'</strong>'+ex+'</span><span style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;font-size:13px"><strong>'+(p.preco?fmt(p.preco):'—')+'</strong><span style="color:#4338CA;font-weight:600">'+(p.pl?'loj. '+fmt(p.pl):'')+'</span></span>'+IC.edit+'</button>';}).join('')+
+  return '<button class="card" data-act="pfEdit" data-v="'+esc(k)+'" style="flex-direction:row;align-items:center;gap:12px;padding:12px 14px;'+(ed===k?'border:2px solid var(--ac)':'')+'"><span class="badge bok">REF '+esc(k)+'</span><span style="flex:1;display:flex;flex-direction:column;gap:2px;min-width:0"><strong style="font-size:14px">'+esc(p.nome)+'</strong>'+ex+'<span style="font-size:12px;font-weight:600;color:'+(p.est==null?'var(--mu)':(p.est<=0?'var(--wa)':'var(--ac2)'))+'">'+(p.est==null?'estoque não informado':'estoque: '+p.est+' un.')+'</span></span><span style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;font-size:13px"><strong>'+(p.preco?fmt(p.preco):'—')+'</strong><span style="color:#4338CA;font-weight:600">'+(p.pl?'loj. '+fmt(p.pl):'')+'</span></span>'+IC.edit+'</button>';}).join('')+
  '</main>';
 };
 V.login=function(){var l=S.lg,b=S.bk||{};
@@ -523,6 +528,22 @@ V.cobranca=function(){var l=consV().filter(function(c){return c.saldo>0&&!c.entr
  (l.length?l.map(function(c){var ua=(c.acertos||[])[0];return '<article class="card" style="gap:10px"><div class="row" style="align-items:flex-start"><button data-act="ficha" data-id="'+c.id+'" style="border:0;background:none;padding:0;text-align:left;font:inherit;color:inherit;cursor:pointer;display:flex;flex-direction:column;gap:2px"><strong style="font-size:16px">'+esc(c.nome)+'</strong>'+tagLj(c)+'<span class="mu">'+esc(c.bairro)+(ua?' · último acerto '+br(ua.dt):'')+'</span></button><strong class="mid" style="color:var(--wa)">'+fmt(c.saldo)+'</strong></div>'+
   '<div class="g2" style="gap:8px"><a class="btn bp" style="background:#1F8F55;min-height:44px;font-size:14px" target="_blank" rel="noopener" href="'+wa(c.tel)+'?text='+encodeURIComponent(txtCobranca(c))+'">'+IC.chat+'Cobrar</a><button class="btn bs" style="min-height:44px;font-size:14px" data-act="cobPagar" data-id="'+c.id+'">Registrar pagamento</button></div></article>';}).join(''):'<div class="ok">Ninguém em cobrança.</div>')+'</main>';
 };
+V.estoque=function(){var ks=Object.keys(S.prod).sort(),e=S.es,tE=0,tC=0,vC=0,nInf=0,msg=S.esMsg;S.esMsg='';
+ ks.forEach(function(k){var p=S.prod[k],u=0;S.cons.forEach(function(c){(c.entrega?c.entrega.itens:[]).forEach(function(x){if(x.ref===k)u+=x.entregue;});});tC+=u;if(p.est==null)nInf++;else{tE+=p.est;if(p.custo)vC+=p.est*p.custo;}});
+ return hdrW('Estoque',ks.length+' produtos')+'<main>'+(msg?'<div class="ok">'+esc(msg)+'</div>':'')+
+ '<div class="g2"><div class="card" style="gap:4px"><span class="mu" style="font-size:12px">Com você</span><span class="mid">'+tE+' un.</span><span class="mu" style="font-size:12px">custo '+fmt(r2(vC))+'</span></div><div class="card" style="gap:4px"><span class="mu" style="font-size:12px">Com consultoras</span><span class="mid">'+tC+' un.</span><span class="mu" style="font-size:12px">em pedidos abertos</span></div></div>'+
+ (nInf?'<p class="warn" style="margin:0;padding:12px 14px;border-radius:12px;font-size:13px">'+nInf+' produto(s) sem estoque informado. Toque em <strong>Corrigir</strong> para colocar a quantidade.</p>':'')+
+ (ks.length?ks.map(function(k){var p=S.prod[k],u=0,ab=e&&e.ref===k;S.cons.forEach(function(c){(c.entrega?c.entrega.itens:[]).forEach(function(x){if(x.ref===k)u+=x.entregue;});});
+  var ms=(S.movs||[]).filter(function(m){return m.ref===k;}).slice(0,5);
+  return '<article class="card" style="gap:10px;'+(ab?'border:2px solid var(--ac)':'')+'"><div class="row" style="align-items:flex-start"><span style="display:flex;flex-direction:column;gap:2px;min-width:0"><span class="badge bok" style="align-self:flex-start">REF '+esc(k)+'</span><strong>'+esc(p.nome)+'</strong><span class="mu" style="font-size:12px">com consultoras: '+u+' un.</span></span><span style="text-align:right"><span class="mu" style="font-size:12px">em estoque</span><br><strong class="num" style="font-size:24px;color:'+(p.est==null?'var(--mu)':(p.est<=0?'var(--wa)':'var(--ac2)'))+'">'+(p.est==null?'—':p.est)+'</strong></span></div>'+
+  (ab?'<div style="display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--bd);padding-top:10px"><div class="g2" style="gap:6px"><button class="btn '+(e.modo==='ent'?'bp':'bs')+'" style="min-height:44px" data-act="esModo" data-v="ent">Entrada (+)</button><button class="btn '+(e.modo==='cor'?'bp':'bs')+'" style="min-height:44px" data-act="esModo" data-v="cor">Corrigir total</button></div>'+
+   '<div class="fld"><label for="es-q">'+(e.modo==='ent'?'Quantas peças chegaram?':'Quantas peças tem agora, contando tudo?')+'</label><input id="es-q" inputmode="numeric" placeholder="Ex.: '+(e.modo==='ent'?'50':'100')+'" value="'+esc(e.q)+'" data-in="esQ"></div>'+
+   (e.erro?'<span style="color:var(--wa);font-weight:600;font-size:13px">'+esc(e.erro)+'</span>':'')+
+   '<div class="g2"><button class="btn bs" data-act="esFechar">Cancelar</button><button class="btn bp" data-act="esSalvar">Salvar</button></div>'+
+   (ms.length?'<span style="font-size:13px;font-weight:600">Últimas movimentações</span>'+ms.map(function(m){return '<div class="row" style="font-size:12px"><span class="mu">'+br(m.dt)+' · '+esc(m.tipo)+(m.obs?' · '+esc(m.obs):'')+'</span><strong style="color:'+(m.q<0?'var(--wa)':'var(--ac2)')+'">'+(m.q>0?'+':'')+m.q+' → '+m.saldo+'</strong></div>';}).join(''):'')+'</div>'
+   :'<div class="g2" style="gap:8px"><button class="btn bl" style="min-height:44px;font-size:14px" data-act="esAbrir" data-v="'+esc(k)+'" data-m="ent">+ Entrada</button><button class="btn bs" style="min-height:44px;font-size:14px" data-act="esAbrir" data-v="'+esc(k)+'" data-m="cor">Corrigir</button></div>')+'</article>';}).join('')
+ :'<div class="ok">Nenhum produto cadastrado ainda.</div>')+'</main>';
+};
 var DESP=['Recarga (carro elétrico)','Combustível','Hospedagem','Alimentação','Manutenção veículo','Pedágio','Outros'];
 V.caixa=function(){
  var c=S.cx,vis=c.lista.filter(inP).filter(function(l){return c.per==='mes'?l.dt.slice(0,7)===HOJE.slice(0,7):l.dt===HOJE;}),e=0,s=0;
@@ -578,8 +599,8 @@ function cepFmt(v){var d=String(v||'').replace(/\D/g,'').slice(0,8);return d.len
 function geoEnd(f){var q='street='+encodeURIComponent(f.rua||'')+'&city='+encodeURIComponent(f.cidade||'')+'&country=Brasil'+(f.cep?'&postalcode='+encodeURIComponent(f.cep):'');
  return busca('https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&'+q).then(function(r){if(r&&r[0]){f.lat=+r[0].lat;f.lng=+r[0].lon;f.gps=false;return true;}return false;}).catch(function(){return false;});}
 var KEY='rotaConsultora.dados';
-function dados(){return {versao:1,salvoEm:new Date().toISOString(),prod:S.prod,pracas:S.pracas,vendedores:S.vendedores,cons:S.cons,caixa:S.cx.lista,comVend:S.cm.vend,comVendas:S.cm.vendas,log:S.log||[],semanas:S.semanas||[],rotaSel:S.rs.sel,ultBackup:S.ultBackup||null};}
-function aplica(d){S.prod=d.prod;S.pracas=d.pracas;S.vendedores=d.vendedores;S.cons=d.cons;S.cx.lista=d.caixa;S.cm.vend=d.comVend;S.cm.vendas=d.comVendas;S.rs.sel=d.rotaSel||{};S.log=d.log||[];S.semanas=d.semanas||[];S.ultBackup=d.ultBackup||null;}
+function dados(){return {versao:1,salvoEm:new Date().toISOString(),prod:S.prod,pracas:S.pracas,vendedores:S.vendedores,cons:S.cons,caixa:S.cx.lista,comVend:S.cm.vend,comVendas:S.cm.vendas,log:S.log||[],semanas:S.semanas||[],movs:S.movs||[],rotaSel:S.rs.sel,ultBackup:S.ultBackup||null};}
+function aplica(d){S.prod=d.prod;S.pracas=d.pracas;S.vendedores=d.vendedores;S.cons=d.cons;S.cx.lista=d.caixa;S.cm.vend=d.comVend;S.cm.vendas=d.comVendas;S.rs.sel=d.rotaSel||{};S.log=d.log||[];S.semanas=d.semanas||[];S.movs=d.movs||[];S.ultBackup=d.ultBackup||null;}
 function valido(d){return d&&d.versao===1&&d.prod&&Array.isArray(d.cons)&&Array.isArray(d.pracas)&&Array.isArray(d.vendedores)&&Array.isArray(d.caixa);}
 function salvarLocal(){try{localStorage.setItem(KEY,JSON.stringify(dados()));S.localOk=true;}catch(e){S.localOk=false;}}
 try{var _d=JSON.parse(localStorage.getItem(KEY)||'null');if(valido(_d))aplica(_d);}catch(e){}
@@ -628,6 +649,7 @@ var A={
   if(k.pg>0)S.cm.vend.unshift(k.lj?{praca:c.praca,c:c.nome+' (lojista)',dt:HOJE,base:k.pg,ganho:k.cv,lj:true,pago:false}:{praca:c.praca,c:c.nome,dt:HOJE,base:k.pg,pago:false});
   if(k.lj)c.ljRatio=k.ratio;
   S.cm.vendas.unshift({praca:c.praca,c:c.nome,dt:HOJE,t:k.t,lj:k.lj});
+  a.itens.forEach(function(x){var p=S.prod[x.ref];if(x.devolvida>0&&p&&p.est!=null){p.est+=x.devolvida;mov(x.ref,'devolução',x.devolvida,'acerto · '+c.nome);}});
   c.emMaos=[];
   c.saldo=k.saldo;if(!k.lj)c.ultFaixa=k.p;c.liberaComSaldo=false;c.entrega=null;c.pendente=null;
   c.hist.unshift(['Acerto · vendeu '+fmt(k.t)+(k.lj?' (lojista)':' ('+k.p+'%)'),brY(HOJE),'Pagou '+fmt(k.pg)+(k.saldo>0?' · deve '+fmt(k.saldo):'')]);
@@ -711,10 +733,14 @@ var A={
  neAdd:function(){keep();var n=S.ne,cod=String(n.ref).replace(/\D/g,''),p=S.prod[cod],LJ=lj(getC(n.cons));
   if(!p){n.msg='Referência não encontrada. Cadastre a peça em Produtos.';render();return;}
   var prc=LJ?p.pl:p.preco;if(!prc){n.msg=LJ?'Essa peça não tem preço lojista. Cadastre o preço lojista em Produtos.':'Essa peça não tem preço de etiqueta. Cadastre em Produtos.';render();return;}
-  var f=n.itens.filter(function(x){return x.ref===cod&&!x.prev;})[0];if(f)f.qtd++;else n.itens.push({ref:cod,qtd:1,preco:prc});
+  var f=n.itens.filter(function(x){return x.ref===cod&&!x.prev;})[0];var eq=estQ(cod);if(eq!=null&&noRasc(cod)+1>eq){n.msg='Sem estoque suficiente da REF '+cod+' ('+nomeP(cod)+'): '+eq+' em estoque.';render();return;}
+  if(f)f.qtd++;else n.itens.push({ref:cod,qtd:1,preco:prc});
   n.ref='';n.msg=p.nome+' adicionada.';render();},
- neQ:function(d){keep();var x=S.ne.itens[+d.i];x.qtd+=(+d.d);if(x.qtd<=0)S.ne.itens.splice(+d.i,1);render();},
- neGerar:function(){var n=S.ne,c=getC(n.cons),q=0,v=0,agg={};
+ neQ:function(d){keep();var x=S.ne.itens[+d.i],eq=estQ(x.ref);if(+d.d>0&&!x.prev&&eq!=null&&noRasc(x.ref)+1>eq){S.ne.msg='Sem estoque suficiente da REF '+x.ref+': '+eq+' em estoque.';render();return;}x.qtd+=(+d.d);if(x.qtd<=0)S.ne.itens.splice(+d.i,1);render();},
+ neGerar:function(){var n=S.ne,c=getC(n.cons),q=0,v=0,agg={},falta=[];
+  var tq={};n.itens.forEach(function(x){if(!x.prev)tq[x.ref]=(tq[x.ref]||0)+x.qtd;});Object.keys(tq).forEach(function(r){var eq=estQ(r);if(eq!=null&&tq[r]>eq)falta.push('REF '+r+' (pedido '+tq[r]+', estoque '+eq+')');});
+  if(falta.length){keep();n.msg='Estoque insuficiente: '+falta.join('; ')+'.';render();return;}
+  Object.keys(tq).forEach(function(r){var p=S.prod[r];if(p&&p.est!=null){p.est-=tq[r];mov(r,'saída',-tq[r],'pedido · '+c.nome);}});
   n.itens.forEach(function(x){var pr=prI(x),k=x.ref+'|'+pr;q+=x.qtd;v+=x.qtd*pr;agg[k]=(agg[k]||0)+x.qtd;});if(!q)return;
   var ini=n.data||cicloDe(n.dataEnt).ini;c.liberaComSaldo=false;c.entrega={data:n.dataEnt,prevista:ini,cicloFim:addD(ini,6),itens:Object.keys(agg).map(function(k){var p=k.split('|');return {ref:p[0],preco:+p[1],custo:S.prod[p[0]]&&S.prod[p[0]].custo!=null?S.prod[p[0]].custo:null,entregue:agg[k],vendida:0,devolvida:0};})};c.emMaos=[];c.pendente=null;
   c.hist.unshift(['Entrega · '+q+' peças',brY(n.dataEnt),fmt(v)+' em etiqueta']);
@@ -783,7 +809,7 @@ var A={
  pfCom:function(d){keep();S.pf.com=String(d.v);render();},
  pfUsar:function(d){keep();S.pf.valor=(+d.v).toFixed(2).replace('.',',');S.pf.erro=false;S.pf.msg='Preço aplicado. Confira e toque em Salvar produto.';render();},
  pfEdit:function(d){var p=S.prod[d.v];if(!p)return;var c2=function(n){return n!=null?(+n).toFixed(2).replace('.',','):'';};
-  S.pf={pl:c2(p.pl),ref:d.v,nome:p.nome,custo:c2(p.custo),valor:c2(p.preco),msg:'',erro:false,mar:'50',com:String(p.com!=null?p.com:30),edit:d.v,delOk:false};S._scroll=0;render();},
+  S.pf={est:p.est!=null?String(p.est):'',pl:c2(p.pl),ref:d.v,nome:p.nome,custo:c2(p.custo),valor:c2(p.preco),msg:'',erro:false,mar:'50',com:String(p.com!=null?p.com:30),edit:d.v,delOk:false};S._scroll=0;render();},
  pfUsarL:function(d){keep();S.pf.pl=(+d.v).toFixed(2).replace('.',',');S.pf.erro=false;S.pf.msg='Preço lojista aplicado. Confira e salve.';render();},
  pfCancel:function(){S.pf=pfVazio();render();},
  pfDel:function(){var f=S.pf,k=f.edit,uso=usoProd(k);
@@ -797,13 +823,15 @@ var A={
    if(v<=0&&!(numP(f.pl)>0)){f.erro=true;f.msg='Informe o valor da etiqueta ou o preço lojista.';render();return;}
    var mudouPreco=old&&r2(old.preco)!==r2(v),uso=usoProd(k);
    if(mudouPreco)S.cons.forEach(function(c){(c.entrega?c.entrega.itens:[]).concat(c.emMaos).forEach(function(x){if(x.ref===k&&x.preco==null)x.preco=old.preco;});});
-   S.prod[k]={nome:f.nome.trim(),preco:v>0?v:null,pl:numP(f.pl)||null,custo:numP(f.custo)||null,com:numP(f.com)};
+   var estNovo=intN(f.est),estAnt=old?old.est:null;
+   S.prod[k]={nome:f.nome.trim(),preco:v>0?v:null,pl:numP(f.pl)||null,custo:numP(f.custo)||null,com:numP(f.com),est:estNovo};
+   if(estNovo!=null&&estNovo!==estAnt)mov(k,estAnt==null?'inicial':'correção',estAnt==null?estNovo:estNovo-estAnt,'pelo cadastro');
    S.pf=pfVazio();S.pf.msg='REF '+k+' atualizada'+(mudouPreco?': novo preço '+fmt(v)+'.'+(uso.length?' As peças que já estão com as consultoras continuam com o preço antigo ('+fmt(old.preco)+').':''):'.');render();return;}
   if(!r){f.erro=true;f.msg='Informe a referência.';}
   else if(S.prod[r]){f.erro=true;f.msg='A referência '+r+' já está cadastrada ('+S.prod[r].nome+').';}
   else if(!f.nome.trim()){f.erro=true;f.msg='Informe o nome da peça.';}
   else if(v<=0&&!(numP(f.pl)>0)){f.erro=true;f.msg='Informe o valor da etiqueta ou o preço lojista.';}
-  else{S.prod[r]={nome:f.nome.trim(),preco:v>0?v:null,pl:numP(f.pl)||null,custo:numP(f.custo)||null,com:numP(f.com)};f.erro=false;f.msg='REF '+r+' – '+f.nome.trim()+' cadastrada.';f.ref='';f.nome='';f.valor='';f.custo='';f.pl='';}
+  else{S.prod[r]={nome:f.nome.trim(),preco:v>0?v:null,pl:numP(f.pl)||null,custo:numP(f.custo)||null,com:numP(f.com),est:intN(f.est)};if(S.prod[r].est!=null)mov(r,'inicial',S.prod[r].est,'cadastro');f.erro=false;f.msg='REF '+r+' – '+f.nome.trim()+' cadastrada.';f.ref='';f.nome='';f.valor='';f.custo='';f.pl='';f.est='';}
   render();},
  fsOpen:function(){S.fs={ini:segDaSemana(HOJE),fim:HOJE,praca:S.praca};go('semana');},
  fsSalvar:function(){var f=S.fs;(S.semanas=S.semanas||[]).unshift({ini:f.ini,fim:f.fim,praca:f.praca,em:HOJE,res:resumoSem(f.ini,f.fim,f.praca)});S.fsMsg='Fechamento de '+brY(f.ini)+' a '+brY(f.fim)+' salvo.';render();},
@@ -817,6 +845,14 @@ var A={
  inReativar:function(d){var c=getC(d.id);c.inativa=null;c.hist.unshift(['Reativada',brY(HOJE),'']);S.inf=null;if(S.tela==='novaentrega'){startNE(c.id);}else S.toast=c.nome+' reativada.';render();},
  inAdiar:function(d){keep();var c=getC(d.id);c.inativa.contato=addD(HOJE,30);c.hist.unshift(['Contato adiado',brY(HOJE),'novo contato em '+brY(c.inativa.contato)]);render();},
  cobPagar:function(d){S.sel=d.id;S.pag={aberto:true,forma:'Pix'};go('ficha');},
+ esAbrir:function(d){keep();S.es={ref:d.v,modo:d.m||'ent',q:'',erro:''};render();},
+ esModo:function(d){keep();S.es.modo=d.v;S.es.erro='';render();},
+ esFechar:function(){keep();S.es=null;render();},
+ esSalvar:function(){var e=S.es,p=S.prod[e.ref],q=intN(e.q);
+  if(q==null||(e.modo==='ent'&&q<=0)){keep();e.erro=e.modo==='ent'?'Informe quantas peças chegaram.':'Informe a quantidade total.';render();return;}
+  if(e.modo==='ent'){p.est=(p.est||0)+q;mov(e.ref,'entrada',q,'compra/reposição');S.esMsg='REF '+e.ref+': +'+q+' peças. Estoque agora: '+p.est+'.';}
+  else{var ant=p.est;p.est=q;mov(e.ref,ant==null?'inicial':'correção',ant==null?q:q-ant,'contagem');S.esMsg='REF '+e.ref+': estoque corrigido para '+q+'.';}
+  keep();S.es=null;render();},
  cxPer:function(d){S.cx.per=d.v;render();},
  cxAba:function(d){S.cx.aba=d.v;S.cx.form=false;render();},
  cxForm:function(){S.cx.form=true;S.cx.praca=pracaAtual();S.cx.cat='';S.cx.valor='';S.cx.desc='';S.cx.erro='';render();},
@@ -833,6 +869,7 @@ var A={
 var IN={
  acPago:function(el){S.ac.pagoTexto=el.value;var k=calc(),s=document.getElementById('acSaldo');s.textContent=fmt(k.saldo);s.style.color=k.saldo>0?'var(--wa)':'var(--ac)';document.getElementById('acCv').textContent=fmt(k.cv);},
  neCons:function(el){startNE(el.value);render();},
+ esQ:function(el){if(S.es)S.es.q=el.value;},
  inData:function(el){if(S.inf)S.inf.data=el.value;},
  inMot:function(el){if(S.inf)S.inf.motivo=el.value;},
  fsIni:function(el){if(/^\d{4}-\d{2}-\d{2}$/.test(el.value)){S.fs.ini=el.value;keep();render();}},
