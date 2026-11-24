@@ -71,7 +71,7 @@ svg{flex-shrink:0}
 <div class="app" id="app"></div>
 <script>
 (function(){
-var IC={
+var IC={print:'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4A1A26" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 8V3h10v5"/><rect x="3" y="8" width="18" height="9" rx="2"/><path d="M7 14h10v7H7z"/></svg>',
  back:'<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>',
  home:'<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10l9-7 9 7v10a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>',
  cal:'<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>',
@@ -157,7 +157,7 @@ function sugere(base){var o=opcoes(base);for(var i=0;i<3;i++)if(seg(o[i]))return
 var SEMF=['domingo','segunda','terça','quarta','quinta','sexta','sábado'];
 function escolhaData(base,sel,act){return '<div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;font-weight:600">Data do acerto</span><div class="g3" style="gap:8px">'+opcoes(base).map(function(d,i){var on=d===sel;return '<button class="btn '+(on?'bl':'bs')+'" style="min-height:56px;flex-direction:column;gap:0;padding:4px;'+(on?'border:2px solid var(--ac)':'')+'" aria-pressed="'+on+'" data-act="'+act+'" data-v="'+d+'"><span style="font-size:15px">'+br(d)+'</span><span style="font-size:11px;font-weight:500">'+SEMF[D(d).getUTCDay()]+(i===1?' · 60 dias':'')+'</span></button>';}).join('')+'</div><span class="mu" style="font-size:12px">Ajuste de um dia para começar a praça na segunda-feira.'+(opcoes(base).some(seg)?'':' Nenhuma das opções cai numa segunda.')+'</span></div>';}
 
-var S={
+var S={imp:{},impMsg:'',impErro:false,etqQ:'1',
  tela:'login',hist:[],sel:null,agAba:'hoje',
  user:null,praca:'todas',lg:{u:'',s:'',erro:''},
  pracas:[
@@ -246,7 +246,7 @@ V.inicio=function(){
  (ct.length?'<h2>Contatos para hoje</h2><p class="mu" style="margin:0">Consultoras inativas para convidar a voltar.</p>'+ct.map(function(c){return '<div class="card" style="gap:10px"><div class="row"><button data-act="ficha" data-id="'+c.id+'" style="border:0;background:none;padding:0;text-align:left;font:inherit;color:inherit;cursor:pointer;display:flex;flex-direction:column;gap:2px"><strong>'+esc(c.nome)+'</strong><span class="mu">'+esc(c.bairro)+' · inativa desde '+br(c.inativa.desde)+'</span></button></div><div class="g2" style="gap:8px"><a class="btn bp" style="background:#3D4230;min-height:44px;font-size:14px" target="_blank" rel="noopener" href="'+wa(c.tel)+'?text='+encodeURIComponent(txtConvite(c))+'">'+IC.chat+'Convidar</a><button class="btn bs" style="min-height:44px;font-size:14px" data-act="inAdiar" data-id="'+c.id+'">Adiar 30 dias</button></div></div>';}).join(''):'')+
  (bl.length?'<div class="row"><h2>Cobrança</h2><button class="btn" style="min-height:44px;background:none;color:var(--ac);padding:0" data-act="go" data-to="cobranca">Ver todas</button></div>'+bl.slice(0,3).map(function(c){return rowC(c,c.bairro+' · sem pedido até quitar');}).join(''):'')+
  '<h2>Atalhos</h2><div class="g3">'+
-  [['novaentrega','Nova entrega',IC.box],['estoque','Estoque',IC.box],['comissoes','Comissões',IC.pct],['produtos','Produtos',IC.tag]].concat(u.admin?[['vendedores','Vendedores',IC.users.replace('currentColor','#4A1A26')],['backup','Backup',IC.save]]:[])
+  [['novaentrega','Nova entrega',IC.box],['estoque','Estoque',IC.box],['comissoes','Comissões',IC.pct],['produtos','Produtos',IC.tag],['impressora','Impressora',IC.print]].concat(u.admin?[['vendedores','Vendedores',IC.users.replace('currentColor','#4A1A26')],['backup','Backup',IC.save]]:[])
   .map(function(a){return '<button class="short" data-act="go" data-to="'+a[0]+'">'+a[2]+a[1]+'</button>';}).join('')+
  '</div></main>'+nav('inicio');
 };
@@ -354,7 +354,7 @@ V.acerto=function(){
   (r.saldo>0?(r.escolha==='cob'?'<div class="warn">'+esc(c.nome)+' foi para a <strong>cobrança</strong> com '+fmt(r.saldo)+' em aberto. Ela só pega peças novas depois de quitar (pode ser por Pix).</div><button class="btn bs" data-act="go" data-to="cobranca">Ver cobrança</button>':'<section class="warn" style="color:var(--tx)"><strong style="color:var(--wa)">Ficou '+fmt(r.saldo)+' em aberto. E agora?</strong><button class="btn bp" data-act="acComPedido" data-id="'+c.id+'">Deixar novo pedido</button><span class="mu" style="font-size:12px">Ela continua no romaneio do próximo ciclo e o saldo é cobrado no próximo acerto.</span><button class="btn bw" data-act="acCobranca" data-id="'+c.id+'">Sem novo pedido · mandar para cobrança</button><span class="mu" style="font-size:12px">Ela sai do romaneio e só pega peças novas depois de quitar.</span></section>')
    :'<div class="ok">Acerto quitado. '+esc(c.nome)+' saiu da lista de acertos em aberto.'+'</div><button class="btn bp" data-act="neFor" data-id="'+c.id+'">Fazer nova entrega (novo acerto em 60 dias)</button>')+
   (function(){var mp=maisPerto(c);return mp?'<section class="card" style="gap:8px"><span class="mu">Próxima consultora mais perto</span><div class="row"><span style="display:flex;flex-direction:column;gap:4px"><strong>'+esc(mp.c.nome)+'</strong><span style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">'+tagCid(mp.c)+'<span class="mu">'+esc(mp.c.bairro)+'</span></span></span><strong>'+fkm(mp.d)+'</strong></div><div class="g2"><a class="btn bl" style="min-height:44px" target="_blank" rel="noopener" href="'+maps(endC(mp.c))+'">'+IC.pin+'Ir até ela</a><button class="btn bp" style="min-height:44px" data-act="acerto" data-id="'+mp.c.id+'">Acertar</button></div></section>':'';})()+
-  '<a class="btn bp" style="background:#3D4230" target="_blank" rel="noopener" href="'+wa(c.tel)+'?text='+encodeURIComponent(txtAcerto(c,r))+'">'+IC.chat+'Enviar comprovante no WhatsApp</a><span class="mu" style="font-size:12px;text-align:center">Relatório das peças vendidas com valores unitários, total, comissão e valor pago.</span>'+
+  '<a class="btn bp" style="background:#3D4230" target="_blank" rel="noopener" href="'+wa(c.tel)+'?text='+encodeURIComponent(txtAcerto(c,r))+'">'+IC.chat+'Enviar comprovante no WhatsApp</a><span class="mu" style="font-size:12px;text-align:center">Relatório das peças vendidas com valores unitários, total, comissão e valor pago.</span><button class="btn bl" data-act="impAc">'+IC.print+'Imprimir comprovante</button>'+
   '<button class="btn" style="background:none;color:var(--ac)" data-act="tab" data-to="inicio">Voltar ao início</button></main>';
  }
  var k=calc(),tot=0;a.itens.forEach(function(x){tot+=x.entregue;});
@@ -401,7 +401,7 @@ V.novaentrega=function(){
  if(!c&&!n.ok)return hdrW('Nova entrega')+'<main><div class="ok">Nenhuma consultora cadastrada nesta praça ainda.</div><button class="btn bp" data-act="nvOpen">+ Cadastrar nova consultora</button></main>';
  if(n.ok){
   body='<div style="display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center"><span class="av" style="width:64px;height:64px;border-radius:32px">'+IC.done+'</span><h2 style="font-size:22px">Romaneio gerado</h2><span class="mu" style="font-size:14px">'+n.ok.q+' peças para '+esc(n.ok.nome)+' · '+fmt(n.ok.v)+' em etiqueta</span></div>'+
-  '<div class="ok">Próximo acerto agendado para o ciclo de <strong>'+txtCiclo(n.ok.prev,n.ok.fim)+'</strong>.</div><a class="btn bp" style="background:#3D4230" target="_blank" rel="noopener" href="'+wa(n.ok.tel)+'?text='+encodeURIComponent(txtRomaneio(n.ok))+'">'+IC.chat+'Enviar romaneio no WhatsApp</a><button class="btn bl" data-act="agenda" data-v="todos">Ver na agenda</button><button class="btn bs" data-act="neNova">Fazer outra entrega</button>';
+  '<div class="ok">Próximo acerto agendado para o ciclo de <strong>'+txtCiclo(n.ok.prev,n.ok.fim)+'</strong>.</div><a class="btn bp" style="background:#3D4230" target="_blank" rel="noopener" href="'+wa(n.ok.tel)+'?text='+encodeURIComponent(txtRomaneio(n.ok))+'">'+IC.chat+'Enviar romaneio no WhatsApp</a><button class="btn bl" data-act="impRom">'+IC.print+'Imprimir romaneio</button><button class="btn bl" data-act="agenda" data-v="todos">Ver na agenda</button><button class="btn bs" data-act="neNova">Fazer outra entrega</button>';
  } else if(c.inativa){
   body='<section class="warn"><strong>'+esc(c.nome)+' está inativa</strong><span>Reative o cadastro para fazer uma nova entrega.</span><button class="btn bp" data-act="inReativar" data-id="'+c.id+'">Reativar e continuar</button></section>';
  } else if(c.saldo>0&&!c.liberaComSaldo&&!c.entrega){
@@ -457,6 +457,7 @@ V.produtos=function(){
  calc+
  '<div class="g2"><div class="fld"><label for="pf-valor">Etiqueta · consultora (R$)</label><input id="pf-valor" inputmode="decimal" placeholder="0,00" value="'+esc(f.valor)+'" data-in="pfF" data-f="valor"></div><div class="fld"><label for="pf-pl">Preço lojista (R$)</label><input id="pf-pl" inputmode="decimal" placeholder="0,00" value="'+esc(f.pl)+'" data-in="pfF" data-f="pl"></div></div>'+
  '<div class="fld"><label for="pf-est">'+(ed?'Quantidade em estoque (pode corrigir)':'Quantidade em estoque')+'</label><input id="pf-est" inputmode="numeric" placeholder="Ex.: 100" value="'+esc(f.est)+'" data-in="pfF" data-f="est"><span class="mu" style="font-size:12px">Peças que estão com você agora. Pedido novo tira do estoque, peça devolvida no acerto volta.'+(ed&&uso.length?' Com consultoras agora: '+esc(uso.join(', '))+'.':'')+'</span></div>'+
+ (ed?'<section style="background:#FBF4EE;border:1px solid var(--acb);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:10px"><strong style="font-size:14px">Etiquetas desta peça</strong><div style="display:flex;gap:8px;align-items:flex-end"><div class="fld" style="width:96px"><label for="etq-q">Quantas</label><input id="etq-q" inputmode="numeric" value="'+esc(S.etqQ)+'" data-in="etqQ"></div><button class="btn bp" style="flex:1" data-act="impEtqP">'+IC.tag.replace('#4A1A26','currentColor')+'Imprimir etiquetas</button></div><span class="mu" style="font-size:12px">REF '+esc(ed)+' · '+(S.prod[ed]&&S.prod[ed].preco?fmt(S.prod[ed].preco):'sem preço')+' · com código de barras. Rolo 50x30 mm.</span></section>':'')+
  (f.msg?'<div class="'+(f.erro?'warn':'ok')+'" style="padding:12px;border-radius:12px">'+esc(f.msg)+'</div>':'')+
  (ed?'<div class="g2"><button class="btn bs" data-act="pfCancel">Cancelar</button><button class="btn bp" data-act="pfSave">Salvar alterações</button></div><button class="btn bw" data-act="pfDel">'+(f.delOk?'Toque de novo para excluir':'Excluir produto')+'</button>':'<button class="btn bp" data-act="pfSave">Salvar produto</button>')+'</section>'+
  '<h2>Peças cadastradas</h2>'+(ks.length?'<p class="mu" style="margin:0;font-size:12px">Toque numa peça para editar ou excluir.</p>':'<p class="mu">Nenhuma peça cadastrada ainda.</p>')+ks.map(function(k){var p=S.prod[k],ex='';
@@ -610,8 +611,8 @@ function cepFmt(v){var d=String(v||'').replace(/\D/g,'').slice(0,8);return d.len
 function geoEnd(f){var q='street='+encodeURIComponent(f.rua||'')+'&city='+encodeURIComponent(f.cidade||'')+'&country=Brasil'+(f.cep?'&postalcode='+encodeURIComponent(f.cep):'');
  return busca('https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&'+q).then(function(r){if(r&&r[0]){f.lat=+r[0].lat;f.lng=+r[0].lon;f.gps=false;return true;}return false;}).catch(function(){return false;});}
 var KEY='rotaConsultora.dados';
-function dados(){return {versao:1,salvoEm:new Date().toISOString(),prod:S.prod,pracas:S.pracas,vendedores:S.vendedores,cons:S.cons,caixa:S.cx.lista,comVend:S.cm.vend,comVendas:S.cm.vendas,log:S.log||[],semanas:S.semanas||[],movs:S.movs||[],rotaSel:S.rs.sel,ultBackup:S.ultBackup||null};}
-function aplica(d){S.prod=d.prod;S.pracas=d.pracas;S.vendedores=d.vendedores;S.cons=d.cons;S.cx.lista=d.caixa;S.cm.vend=d.comVend;S.cm.vendas=d.comVendas;S.rs.sel=d.rotaSel||{};S.log=d.log||[];S.semanas=d.semanas||[];S.movs=d.movs||[];S.ultBackup=d.ultBackup||null;migraCores();numerar();}
+function dados(){return {versao:1,salvoEm:new Date().toISOString(),prod:S.prod,pracas:S.pracas,vendedores:S.vendedores,cons:S.cons,caixa:S.cx.lista,comVend:S.cm.vend,comVendas:S.cm.vendas,log:S.log||[],semanas:S.semanas||[],movs:S.movs||[],rotaSel:S.rs.sel,ultBackup:S.ultBackup||null,imp:S.imp||{}};}
+function aplica(d){S.prod=d.prod;S.pracas=d.pracas;S.vendedores=d.vendedores;S.cons=d.cons;S.cx.lista=d.caixa;S.cm.vend=d.comVend;S.cm.vendas=d.comVendas;S.rs.sel=d.rotaSel||{};S.log=d.log||[];S.semanas=d.semanas||[];S.movs=d.movs||[];S.ultBackup=d.ultBackup||null;S.imp=d.imp||S.imp||{};migraCores();numerar();}
 function valido(d){return d&&d.versao===1&&d.prod&&Array.isArray(d.cons)&&Array.isArray(d.pracas)&&Array.isArray(d.vendedores)&&Array.isArray(d.caixa);}
 function salvarLocal(){try{localStorage.setItem(KEY,JSON.stringify(dados()));S.localOk=true;}catch(e){S.localOk=false;}}
 try{var _d=JSON.parse(localStorage.getItem(KEY)||'null');if(valido(_d))aplica(_d);}catch(e){}
@@ -628,13 +629,86 @@ V.backup=function(){var b=S.bk||{},nc=S.cons.length,podeShare=false;
  (b.pend?'<div class="warn" style="color:var(--tx)"><strong>Confirmar restauração?</strong><span>Backup de '+quando(b.pend.salvoEm)+' com '+b.pend.cons.length+' consultoras. Isso substitui tudo o que está no app agora.</span><div class="g2"><button class="btn bs" data-act="bkCancel">Cancelar</button><button class="btn bp" data-act="bkOk">Restaurar</button></div></div>':'')+
  '</section></main>';
 };
+
+/* ===== Impressão térmica (ESC/POS) ===== */
+var IMPDEF={modo:'auto',col:48,etqW:50,etqH:30,gap:2,x:0,aj:0,barra:true};
+function impCfg(){var o={},k,s=S.imp||{};for(k in IMPDEF)o[k]=IMPDEF[k];for(k in s)if(s[k]!=null)o[k]=s[k];return o;}
+function semAc(s){return String(s==null?'':s).replace(/ /g,' ').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[–—]/g,'-').replace(/·/g,'-').replace(/[“”]/g,'"').replace(/[‘’]/g,"'").replace(/[^\x20-\x7E\n]/g,'');}
+function repC(c,n){return new Array(Math.max(0,n)+1).join(c);}
+function EP(){var b=[],o={
+ raw:function(){for(var i=0;i<arguments.length;i++)b.push(arguments[i]&255);return o;},
+ txt:function(t){t=semAc(t);for(var i=0;i<t.length;i++)b.push(t.charCodeAt(i));return o;},
+ ln:function(t){return o.txt((t||'')+'\n');},
+ init:function(){return o.raw(27,64);},
+ al:function(n){return o.raw(27,97,n);},
+ bold:function(on){return o.raw(27,69,on?1:0);},
+ size:function(n){return o.raw(29,33,n);},
+ feed:function(d){d=Math.round(d);while(d>0){var k=Math.min(255,d);o.raw(27,74,k);d-=k;}return o;},
+ bytes:function(){return new Uint8Array(b);}};return o;}
+function quebra(t,w){var out=[];String(t).split('\n').forEach(function(l){if(l.length<=w){out.push(l);return;}var p='';l.split(' ').forEach(function(wd){while(wd.length>w){if(p){out.push(p);p='';}out.push(wd.slice(0,w));wd=wd.slice(w);}if(!p)p=wd;else if((p+' '+wd).length<=w)p+=' '+wd;else{out.push(p);p=wd;}});out.push(p);});return out;}
+function impTexto(t){var c=impCfg(),w=Math.max(20,Math.round(c.col)||48),e=EP().init();
+ e.al(1).size(0x11).bold(1).ln('H L S').size(0).bold(0).ln('A C T I V E W E A R').al(0).ln(repC('-',w));
+ semAc(t).split('\n').forEach(function(l){var bd=/^\s*\*.*\*\s*$/.test(l);l=l.replace(/\*/g,'').trim();if(bd)e.bold(1);quebra(l,w).forEach(function(x){e.ln(x);});if(bd)e.bold(0);});
+ e.ln(repC('-',w)).al(1).ln('HLS Activewear').al(0).feed(130);return e.bytes();}
+function impEtq(lista){var c=impCfg(),mm=function(v){return Math.round((+v||0)*8);},W=mm(c.etqW)||400,X=mm(c.x),pitch=mm((+c.etqH||30)+(+c.gap||0)+(+c.aj||0)),e=EP().init();
+ e.raw(29,76,X&255,X>>8,29,87,W&255,W>>8).al(1);
+ lista.forEach(function(it){for(var i=0;i<it.q;i++){var used=0;
+  e.feed(16);used+=16;
+  e.bold(1).txt('REF '+it.ref).bold(0).feed(30);used+=30;
+  e.size(0x11).bold(1).txt(fmt(it.preco)).size(0).bold(0).feed(54);used+=54;
+  if(c.barra){var d=semAc(String(it.ref)).slice(0,20),h=48;if(d){e.raw(29,104,h,29,119,2,29,72,0,29,107,73,d.length+2,123,66);for(var j=0;j<d.length;j++)e.raw(d.charCodeAt(j));used+=h;}}
+  e.feed(Math.max(8,pitch-used));}});
+ e.raw(29,76,0,0);return e.bytes();}
+var BT={dev:null,ch:null};
+var BT_SERV=[0x18f0,0xff00,0xffe0,0xfee7,0xae30,0xffb0,0xfff0,'e7810a71-73ae-499d-8c15-faa9aef0c3f2','49535343-fe7d-4ae5-8fa9-9fafd205e455'];
+function btCh(){
+ if(BT.ch&&BT.dev&&BT.dev.gatt&&BT.dev.gatt.connected)return Promise.resolve(BT.ch);
+ var p=BT.dev?Promise.resolve(BT.dev):navigator.bluetooth.requestDevice({acceptAllDevices:true,optionalServices:BT_SERV});
+ return p.then(function(d){BT.dev=d;return d.gatt.connect();}).then(function(g){return g.getPrimaryServices();}).then(function(ss){
+  return ss.reduce(function(pr,sv){return pr.then(function(f){if(f)return f;return sv.getCharacteristics().then(function(cs){for(var i=0;i<cs.length;i++){if(cs[i].properties.writeWithoutResponse||cs[i].properties.write)return cs[i];}return null;}).catch(function(){return null;});});},Promise.resolve(null));
+ }).then(function(ch){if(!ch)throw new Error('semCanal');BT.ch=ch;return ch;});}
+function btEnviar(bytes){return btCh().then(function(ch){var i=0,n=100;function prox(){if(i>=bytes.length)return Promise.resolve();var part=bytes.slice(i,i+n);i+=n;var w=(ch.properties.writeWithoutResponse&&ch.writeValueWithoutResponse)?ch.writeValueWithoutResponse(part):ch.writeValue(part);return w.then(function(){return new Promise(function(r){setTimeout(r,25);});}).then(prox);}return prox();});}
+function b64(u){var t='';for(var i=0;i<u.length;i++)t+=String.fromCharCode(u[i]);return btoa(t);}
+function modoImp(){var c=impCfg();if(c.modo==='auto')return (typeof navigator!=='undefined'&&navigator.bluetooth)?'bt':'rawbt';return c.modo;}
+var _impT=null;
+function impAviso(m,erro){S.impMsg=m;S.impErro=!!erro;keep();render();clearTimeout(_impT);if(m&&!erro)_impT=setTimeout(function(){S.impMsg='';keep();render();},5000);}
+function imprimir(bytes,nome){var m=modoImp();
+ if(m==='rawbt'){location.href='rawbt:base64,'+b64(bytes);impAviso((nome||'Impressão')+' enviada para o app RawBT. Se nada acontecer, instale o RawBT na Play Store.');return;}
+ if(!navigator.bluetooth){impAviso('Este navegador não conecta direto na impressora. Em Impressora, escolha o modo App RawBT.',true);return;}
+ var pr=btEnviar(bytes);impAviso('Enviando para a impressora…');
+ pr.then(function(){impAviso((nome||'Impressão')+' enviada para a impressora.');}).catch(function(err){BT.ch=null;if(err&&err.name==='NotFoundError'){S.impMsg='';keep();render();return;}BT.dev=null;impAviso('Não consegui imprimir pela conexão direta. Ligue a impressora e tente de novo, ou use o modo App RawBT em Impressora.',true);});}
+V.impressora=function(){var c=impCfg(),m=modoImp(),bt=typeof navigator!=='undefined'&&!!navigator.bluetooth;
+ var opt=function(v,l,d){var on=c.modo===v;return '<button class="card" data-act="impModo" data-v="'+v+'" aria-pressed="'+on+'" style="gap:4px;text-align:left;'+(on?'border:2px solid var(--ac)':'')+'"><strong style="font-size:14px">'+(on?'● ':'○ ')+l+'</strong><span class="mu" style="font-size:12px;line-height:1.45">'+d+'</span></button>';};
+ var num=function(f,l){return '<div class="fld"><label for="imp-'+f+'">'+l+'</label><input id="imp-'+f+'" inputmode="decimal" value="'+esc(String(c[f]).replace('.',','))+'" data-in="impF" data-f="'+f+'"></div>';};
+ return hdrW('Impressora','Térmica 80 mm Bluetooth (GS-MTP8)')+'<main>'+
+ '<section class="card" style="gap:8px"><h2 style="font-size:16px">Antes de imprimir</h2><span class="mu" style="font-size:13px;line-height:1.55">1. Ligue a impressora e coloque a bobina 80 mm (ou o rolo de etiquetas).<br>2. Ative o Bluetooth do celular.<br>3. Na primeira impressão, escolha a impressora na lista que aparecer.</span></section>'+
+ '<h2>Como conectar</h2>'+opt('auto','Automático (recomendado)','Usa a conexão direta quando o navegador permite. Se não der, manda para o app RawBT.')+
+ opt('bt','Conexão direta pelo navegador',bt?'Este navegador permite. O celular pede para escolher a impressora na primeira vez.':'Este navegador não tem conexão direta. Abra o app no Chrome ou use o RawBT.')+
+ opt('rawbt','App RawBT','Instale o app gratuito RawBT na Play Store e pareie a impressora nele uma vez. Depois, tudo o que o Rota Consultora mandar sai na impressora.')+
+ '<span class="mu" style="font-size:12px">Em uso agora: <strong>'+(m==='bt'?'conexão direta':'App RawBT')+'</strong>'+(BT.dev?' · conectada: '+esc(BT.dev.name||'impressora'):'')+'</span>'+
+ (BT.dev?'<button class="btn bs" data-act="impEsquecer">Trocar de impressora</button>':'')+
+ '<h2>Testar</h2><div class="g2"><button class="btn bp" data-act="impTeste">'+IC.print.replace('#4A1A26','currentColor')+'Testar nota</button><button class="btn bl" data-act="impTesteEtq">'+IC.tag+'Testar etiqueta</button></div>'+
+ '<section class="card" style="gap:10px"><h2 style="font-size:16px">Ajustes da nota</h2>'+num('col','Letras por linha (bobina 80 mm = 48 · 58 mm = 32)')+'</section>'+
+ '<section class="card" style="gap:10px"><h2 style="font-size:16px">Ajustes da etiqueta</h2><div class="g2">'+num('etqW','Largura (mm)')+num('etqH','Altura (mm)')+'</div><div class="g2">'+num('gap','Espaço entre etiquetas (mm)')+num('x','Margem esquerda (mm)')+'</div>'+num('aj','Ajuste fino da altura (mm, aceita negativo)')+
+ '<button class="btn '+(c.barra?'bl':'bs')+'" data-act="impBarra" aria-pressed="'+c.barra+'">'+(c.barra?'✓ Com código de barras':'Sem código de barras')+'</button>'+
+ '<span class="mu" style="font-size:12px;line-height:1.5">Saiu deslocada para o lado? Mude a margem esquerda. Começou a invadir a etiqueta seguinte? Use o ajuste fino (ex.: -1 ou 1) e teste de novo.</span></section></main>';};
 var app=document.getElementById('app');
-function render(){HOJE=hojeISO();numerar();migraCores();if(S.user)salvarLocal();app.innerHTML=V[S.tela]();var m=app.querySelector('main');if(m)m.scrollTop=S._scroll||0;S._scroll=0;}
+function render(){HOJE=hojeISO();numerar();migraCores();if(S.user)salvarLocal();app.innerHTML=V[S.tela]()+(S.impMsg?'<div role="status" style="position:fixed;left:12px;right:12px;bottom:88px;z-index:60;padding:10px 12px 10px 14px;border-radius:14px;background:'+(S.impErro?'#8A3F1E':'#2B1A17')+';color:#fff;font-size:14px;line-height:1.4;display:flex;gap:8px;align-items:center;box-shadow:0 6px 20px rgba(0,0,0,.25)"><span style="flex:1">'+esc(S.impMsg)+'</span><button data-act="impOk" style="background:none;border:0;color:#fff;font-weight:600;min-height:44px;min-width:44px;font-size:14px">OK</button></div>':'');var m=app.querySelector('main');if(m)m.scrollTop=S._scroll||0;S._scroll=0;}
 function keep(){var m=app.querySelector('main');S._scroll=m?m.scrollTop:0;}
 function go(t){if(t!==S.tela)S.hist.push(S.tela);S.tela=t;S._scroll=0;render();}
 function startNE(id){var c=getC(id);if(!c||!inP(c)){c=consV().filter(function(o){return !o.inativa;})[0];id=c?c.id:null;}S.ne={cons:id,dataEnt:HOJE,data:cicloDe(HOJE).ini,ref:'',msg:'',ok:null,itens:c&&!c.entrega&&!c.saldo?c.emMaos.map(function(x){return {ref:x.ref,qtd:x.qtd,prev:true,preco:prI(x)};}):[]};}
 
 var A={
+ impOk:function(){S.impMsg='';clearTimeout(_impT);keep();render();},
+ impModo:function(d){S.imp=impCfg();S.imp.modo=d.v;keep();render();},
+ impBarra:function(){S.imp=impCfg();S.imp.barra=!S.imp.barra;keep();render();},
+ impEsquecer:function(){try{if(BT.dev&&BT.dev.gatt)BT.dev.gatt.disconnect();}catch(e){}BT.dev=null;BT.ch=null;keep();render();},
+ impTeste:function(){imprimir(impTexto('*Teste de impressão*\nRota Consultora · HLS Activewear\nData: '+brY(HOJE)+'\n\n1x Peça de teste (REF 1234) – '+fmt(89.9)+'\n\n📅 *PRÓXIMO ACERTO: SEGUNDA-FEIRA, '+brY(HOJE)+'*\n\nSe este texto saiu inteiro e sem cortes, está tudo certo.'),'Teste');},
+ impTesteEtq:function(){imprimir(impEtq([{ref:'1234',preco:89.9,q:2}]),'Teste de etiqueta');},
+ impRom:function(){var o=S.ne&&S.ne.ok;if(!o)return;imprimir(impTexto(txtRomaneio(o)),'Romaneio');},
+ impEtqRom:function(){var o=S.ne&&S.ne.ok;if(!o)return;imprimir(impEtq(o.itens.map(function(x){var p=S.prod[x.ref];return {ref:x.ref,preco:p&&p.preco?p.preco:x.preco,q:x.q};})),'Etiquetas');},
+ impAc:function(){var c=getC(S.ac.id),r=S.ac.res;if(!c||!r)return;imprimir(impTexto(txtAcerto(c,r)),'Comprovante');},
+ impEtqP:function(){var ref=S.pf.edit,p=S.prod[ref],q=parseInt(S.etqQ,10);if(!p)return;if(!p.preco){impAviso('Cadastre o valor da etiqueta antes de imprimir.',true);return;}if(!(q>0)){impAviso('Digite quantas etiquetas quer imprimir.',true);return;}if(q>200)q=200;imprimir(impEtq([{ref:ref,preco:p.preco,q:q}]),q+' etiqueta'+(q>1?'s':''));},
  go:function(d){if(d.to==='novaentrega')startNE(S.ne.cons);if(d.to==='rota')S.rs.ver=selIds().length>0;go(d.to);},
  tab:function(d){S.msgCons='';S.hist=[];S.tela=d.to;S._scroll=0;render();},
  back:function(){S.tela=S.hist.pop()||'inicio';render();},
@@ -881,6 +955,8 @@ var A={
  cmPagar:function(d){keep();var v=S.cm.vend[+d.i];v.pago=true;S.cx.lista.unshift({praca:v.praca,dt:HOJE,ent:false,d:'Comissão paga · '+v.c,cat:'Comissão paga',f:'Pix',v:ganhoV(v)});render();}
 };
 var IN={
+ etqQ:function(el){S.etqQ=el.value;},
+ impF:function(el){var v=parseFloat(String(el.value).replace(',','.'));if(!isNaN(v)){S.imp=impCfg();S.imp[el.getAttribute('data-f')]=v;salvarLocal();}},
  acPago:function(el){S.ac.pagoTexto=el.value;var k=calc(),s=document.getElementById('acSaldo');s.textContent=fmt(k.saldo);s.style.color=k.saldo>0?'var(--wa)':'var(--ac)';document.getElementById('acCv').textContent=fmt(k.cv);},
  neCons:function(el){startNE(el.value);render();},
  busca:function(el){S.busca=el.value;var p=el.selectionStart;render();var b=document.getElementById('busca');if(b&&b.focus){b.focus();try{b.setSelectionRange(p,p);}catch(e){}}},
